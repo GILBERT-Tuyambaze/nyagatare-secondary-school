@@ -10,6 +10,8 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { getDashboardStats, getApplications, getEvents, getDonations, updateApplication } from '@/services/supabaseService';
 import { Application, Event, Donation } from '@/types/database';
+import Header from '@/components/Header'
+import Footer from '@/components/Footer'
 
 const AdminDashboard = () => {
   const [activeTab, setActiveTab] = useState('overview');
@@ -92,6 +94,7 @@ const AdminDashboard = () => {
 
   if (!isAdmin) {
     return (
+      <><Header />
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <Card className="max-w-md">
           <CardContent className="p-6 text-center">
@@ -103,11 +106,15 @@ const AdminDashboard = () => {
           </CardContent>
         </Card>
       </div>
+        <Footer />
+      </>
     );
   }
 
   if (loading) {
     return (
+      <>
+        <Header />
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600 mx-auto"></div>
@@ -115,9 +122,12 @@ const AdminDashboard = () => {
         </div>
       </div>
     );
-  }
+  
+     <Footer />
+      </>}
 
   return (
+    <><Header />
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <div className="bg-white shadow-sm border-b">
@@ -403,6 +413,8 @@ const AdminDashboard = () => {
         )}
       </div>
     </div>
+      <Footer />
+    </>
   );
 };
 
