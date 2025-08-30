@@ -121,10 +121,10 @@ const AdminDashboard = () => {
           <p className="mt-4 text-gray-600">Loading dashboard...</p>
         </div>
       </div>
+        <Footer />
+      </>
     );
-  
-     <Footer />
-      </>}
+        }
 
   return (
     <><Header />
