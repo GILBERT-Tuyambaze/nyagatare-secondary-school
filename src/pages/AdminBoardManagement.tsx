@@ -11,8 +11,6 @@ import { getBoardMembers, deleteBoardMember } from '@/services/supabaseService'
 import { BoardMember } from '@/types/database'
 import { BoardMemberForm } from '@/components/BoardMemberForm'
 import { useAuth } from '@/contexts/AuthContext'
-import Header from '@/components/Header'
-import Footer from '@/components/Footer'
 
 const AdminBoardManagement: React.FC = () => {
   const [boardMembers, setBoardMembers] = useState<BoardMember[]>([])
@@ -101,7 +99,6 @@ const AdminBoardManagement: React.FC = () => {
 
   if (!isAdmin) {
     return (
-      <><Header />
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <Card className="max-w-md">
           <CardContent className="p-6 text-center">
@@ -110,33 +107,25 @@ const AdminBoardManagement: React.FC = () => {
           </CardContent>
         </Card>
       </div>
-        <Footer />
-      </>
     )
   }
 
   if (loading) {
     return (
-      <>
-        <Header />
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600 mx-auto"></div>
           <p className="mt-4 text-gray-600">Loading board members...</p>
         </div>
       </div>
-        <Footer />
-      </>
     )
   }
 
   return (
-    <>
-      <Header />
-    <div className="min-h-screen bg-gray-50 py-8 pb-32">
+    <div className="min-h-screen bg-gray-50 py-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
-        <div className="mb-8  mt-18">
+        <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900">Board Members Management</h1>
           <p className="text-gray-600">Manage school board members, teachers, leaders, and parent representatives.</p>
         </div>
@@ -331,8 +320,6 @@ const AdminBoardManagement: React.FC = () => {
         />
       </div>
     </div>
-        <Footer />
-        </>
   )
 }
 
