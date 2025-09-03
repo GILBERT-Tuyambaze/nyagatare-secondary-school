@@ -4,13 +4,13 @@ import { Star, Quote } from 'lucide-react';
 const Testimonials = () => {
   const testimonials = [
     {
-      name: 'Sarah Uwimana',
+      name: 'Origene KWIZERA',
       class: 'Class of 2024',
       quote: 'NSS provided me with the foundation I needed for my engineering studies. The STEM programs are exceptional.',
       rating: 5
     },
     {
-      name: 'Jean Baptiste Nkurunziza',
+      name: 'Gilbert TUYAMBAZE',
       class: 'Class of 2023',
       quote: 'The supportive environment and dedicated teachers helped me discover my passion for computer science.',
       rating: 5
