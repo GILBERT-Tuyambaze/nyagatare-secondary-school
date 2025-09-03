@@ -11,13 +11,13 @@ const Testimonials = () => {
     },
     {
       name: 'Gilbert TUYAMBAZE',
-      class: 'Class of 2023',
+      class: 'Class of 2024',
       quote: 'The supportive environment and dedicated teachers helped me discover my passion for computer science.',
       rating: 5
     },
     {
       name: 'Grace Mukamana',
-      class: 'Class of 2024',
+      class: 'Class of 2025',
       quote: 'I felt prepared for university thanks to the rigorous academic programs and excellent facilities.',
       rating: 5
     }
