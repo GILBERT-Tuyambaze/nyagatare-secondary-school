@@ -107,7 +107,7 @@ const Footer = () => {
         {/* Copyright */}
         <div className="border-t border-gray-800 mt-8 pt-8 text-center">
           <p className="text-gray-400 text-sm">
-            <h3><a href="https://gilbert-tuyambaze.vercel.app" className="text-gray-300 hover:text-orange-500">Developed By Gilbert TUYAMBAZE</a></h3>
+            <h3><a href="https://tuyambaze-gilbert.vercel.app" className="text-gray-300 hover:text-orange-500">Developed By Gilbert TUYAMBAZE</a></h3>
             © 2025 Nyagatare Secondary School. All rights reserved.
           </p>
         </div>
