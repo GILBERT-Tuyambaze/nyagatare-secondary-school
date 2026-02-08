@@ -214,7 +214,7 @@ export const getBoardMembers = async () => {
         category: 'teacher' as const,
         bio: 'Mr. Martin Hatanga is a Computer Science Teacher and counsellor, supporting students in both technical education and academic guidance while promoting digital skills development.,
         email: 'martinhatanga1@gmail.com',
-        phone: '+250 784 223 143,
+        phone: '+250 784 223 143',
         qualifications: '',
         experience_years: 15,
         is_active: true,
