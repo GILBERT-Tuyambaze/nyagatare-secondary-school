@@ -225,7 +225,7 @@ export const getBoardMembers = async () => {
         id: '2',
         full_name: 'Mr. AINEBYOONA Dickson ',
         position: 'Director Of Studies',
-        category: 'teacher' as const,
+        category: 'leader' as const,
         bio: 'Mr. Dickson Ainebyoona serves as Director of Studies at Nyagatare Secondary School, where he oversees academic programs, supports curriculum implementation, and promotes high standards of teaching and learning.',
         email: '',
         phone: '+250 785 972 954',
