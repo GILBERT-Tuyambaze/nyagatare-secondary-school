@@ -212,7 +212,7 @@ export const getBoardMembers = async () => {
         full_name: 'Mr. Martin Hatanga',
         position: 'Head of Science Computer Science',
         category: 'teacher' as const,
-        bio: 'Mr. Martin Hatanga is a Computer Science Teacher and counsellor, supporting students in both technical education and academic guidance while promoting digital skills development.,
+        bio: 'Mr. Martin Hatanga is a Computer Science Teacher and counsellor, supporting students in both technical education and academic guidance while promoting digital skills development.',
         email: 'martinhatanga1@gmail.com',
         phone: '+250 784 223 143',
         qualifications: '',
