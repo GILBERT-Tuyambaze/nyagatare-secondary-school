@@ -38,6 +38,12 @@ export interface Application {
   status: 'pending' | 'review' | 'approved' | 'rejected' | 'waitlist'
   score: number
   admin_notes?: string
+  communication_notes?: string
+  applicant_invite_id?: string
+  applicant_signup_url?: string
+  assigned_to?: string
+  last_contacted_at?: string
+  last_contacted_by?: string
   reviewed_by?: string
   reviewed_at?: string
   created_at: string

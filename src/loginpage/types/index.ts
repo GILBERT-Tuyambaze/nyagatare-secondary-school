@@ -1,6 +1,7 @@
 export type Role =
   | 'SuperAdmin'
   | 'Headmaster'
+  | 'AdmissionsOfficer'
   | 'DOS'
   | 'DOD'
   | 'Bursar'
@@ -54,6 +55,7 @@ export interface Invite {
   id: string
   email: string
   role: Role
+  applicationId?: string
   invitedBy: string
   invitedByUid?: string
   invitedByRole?: Role

@@ -1,4 +1,4 @@
-import { collection, deleteDoc, doc, getDoc, getDocs, orderBy, query, setDoc, updateDoc, where } from 'firebase/firestore'
+import { addDoc, collection, deleteDoc, doc, getDoc, getDocs, orderBy, query, setDoc, updateDoc, where } from 'firebase/firestore'
 import { db } from '@/firebase'
 import { Application, Event, Donation, BoardMember, Student } from '@/types/database'
 import { ClassPost, Classroom, ClassStudent, Invite, Role, SystemUser } from '@/loginpage/types'
@@ -425,6 +425,38 @@ export const createInvite = async ({
     console.error('Error creating invite:', error)
     throw error
   }
+}
+
+export const createApplicantInvite = async ({
+  applicationId,
+  email,
+  origin,
+}: {
+  applicationId: string
+  email: string
+  origin: string
+}) => {
+  const token = createInviteToken()
+  const createdAt = nowIso()
+  const expiresAt = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString()
+  const signupUrl = `${origin.replace(/\/$/, '')}/invite-signup/${token}`
+
+  const document: Invite = {
+    id: token,
+    applicationId,
+    email,
+    role: 'Applicant',
+    invitedBy: 'Admissions Portal',
+    invitedByUid: 'public-application',
+    invitedByRole: 'Applicant',
+    status: 'pending',
+    expiresAt,
+    createdAt,
+    signupUrl,
+  }
+
+  await setDoc(doc(invitesCollection, token), document)
+  return document
 }
 
 export const updateInviteRole = async ({

@@ -2,16 +2,18 @@ import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
 import { BookOpen, BrainCircuit, CreditCard, FileText, Home, LayoutDashboard, Shield, UserCog, UserPlus, Users } from 'lucide-react'
 import { NavLink } from 'react-router-dom'
-import { requirePermission } from '../lib/authMiddleware'
-import { AccessProfile, Permission } from '../types'
+import { requireAnyRole, requirePermission } from '../lib/authMiddleware'
+import { AccessProfile, Permission, Role } from '../types'
 
 const navItems: Array<{
   label: string
   to: string
   icon: typeof Home
   permission?: Permission
+  roles?: Role[]
 }> = [
   { label: 'Dashboard', to: '/system', icon: Home },
+  { label: 'Applications', to: '/system/applications', icon: FileText, roles: ['SuperAdmin', 'Headmaster', 'AdmissionsOfficer', 'DOS'] },
   { label: 'Student', to: '/system/student-dashboard', icon: BookOpen, permission: 'view_marks' },
   { label: 'Control Center', to: '/system/control-center', icon: LayoutDashboard, permission: 'view_reports' },
   { label: 'AI Hub', to: '/system/ai-hub', icon: BrainCircuit, permission: 'view_reports' },
@@ -43,7 +45,11 @@ export function Sidebar({ profile }: { profile: AccessProfile }) {
 
       <nav className="space-y-2">
         {navItems
-          .filter((item) => !item.permission || requirePermission(profile, item.permission))
+          .filter(
+            (item) =>
+              (!item.permission || requirePermission(profile, item.permission)) &&
+              (!item.roles || requireAnyRole(profile, item.roles))
+          )
           .map((item) => {
             const Icon = item.icon
             return (

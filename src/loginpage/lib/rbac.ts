@@ -3,6 +3,7 @@ import { AccessProfile, Permission, Role, RoleDefinition } from '../types'
 export const rolePermissions: Record<Role, Permission[]> = {
   SuperAdmin: ['manage_users', 'assign_roles', 'view_reports', 'upload_marks', 'view_marks', 'manage_content', 'publish_news', 'manage_discipline', 'manage_finance'],
   Headmaster: ['view_reports', 'assign_roles', 'manage_users', 'publish_news'],
+  AdmissionsOfficer: ['view_reports', 'manage_users'],
   DOS: ['upload_marks', 'view_reports'],
   DOD: ['view_reports', 'manage_discipline'],
   Bursar: ['view_reports', 'manage_finance'],
@@ -22,6 +23,7 @@ export const rolePermissions: Record<Role, Permission[]> = {
 export const roleDefinitions: RoleDefinition[] = [
   { role: 'SuperAdmin', description: 'Full platform control with unrestricted access to users, roles, reports, academics, content, discipline, and finance.', permissions: rolePermissions.SuperAdmin },
   { role: 'Headmaster', description: 'School-wide leadership access across strategic modules and reports.', permissions: rolePermissions.Headmaster },
+  { role: 'AdmissionsOfficer', description: 'Admissions operations role for applications, applicant follow-up, and enrollment coordination.', permissions: rolePermissions.AdmissionsOfficer },
   { role: 'DOS', description: 'Academic coordination with marks and report visibility.', permissions: rolePermissions.DOS },
   { role: 'DOD', description: 'Discipline oversight and institutional case management.', permissions: rolePermissions.DOD },
   { role: 'Bursar', description: 'Financial management and reporting visibility.', permissions: rolePermissions.Bursar },
@@ -41,6 +43,8 @@ export const roleDefinitions: RoleDefinition[] = [
 const roleAliases: Array<{ match: string; role: Role }> = [
   { match: 'superadmin', role: 'SuperAdmin' },
   { match: 'headmaster', role: 'Headmaster' },
+  { match: 'admission', role: 'AdmissionsOfficer' },
+  { match: 'admissions', role: 'AdmissionsOfficer' },
   { match: 'dos', role: 'DOS' },
   { match: 'dod', role: 'DOD' },
   { match: 'bursar', role: 'Bursar' },
@@ -112,6 +116,7 @@ export const invitePermissions: Record<Role, Role[]> = {
     'Guest',
   ],
   Headmaster: [
+    'AdmissionsOfficer',
     'DOS',
     'DOD',
     'Bursar',
@@ -127,6 +132,7 @@ export const invitePermissions: Record<Role, Role[]> = {
     'Applicant',
     'Guest',
   ],
+  AdmissionsOfficer: ['Applicant', 'Student', 'Guest'],
   DOS: ['HOD', 'Teacher', 'Student', 'StudentLeader', 'Applicant', 'Guest'],
   DOD: ['Student', 'StudentLeader', 'Animator', 'Animatress', 'ParentLeader', 'Parent', 'Applicant', 'Guest'],
   Bursar: ['Applicant', 'Guest'],

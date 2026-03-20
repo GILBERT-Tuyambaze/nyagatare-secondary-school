@@ -38,6 +38,7 @@ service cloud.firestore {
         && accessProfileDoc(request.auth.uid).data.role in [
           "SuperAdmin",
           "Headmaster",
+          "AdmissionsOfficer",
           "DOS",
           "DOD",
           "Bursar",
@@ -51,6 +52,7 @@ service cloud.firestore {
       return isBootstrapAdmin()
         || isSuperAdmin()
         || (hasRole("Headmaster") && targetRole in [
+          "AdmissionsOfficer",
           "DOS",
           "DOD",
           "Bursar",
@@ -64,6 +66,11 @@ service cloud.firestore {
           "ParentLeader",
           "ContentManager",
           "Applicant",
+          "Guest"
+        ])
+        || (hasRole("AdmissionsOfficer") && targetRole in [
+          "Applicant",
+          "Student",
           "Guest"
         ])
         || (hasRole("DOS") && targetRole in [
@@ -180,6 +187,14 @@ service cloud.firestore {
         && request.resource.data.invitedByUid == request.auth.uid
         && (isBootstrapAdmin() || request.resource.data.invitedByRole == currentRole())
         && canInviteRole(request.resource.data.role);
+      allow create: if !isSignedIn()
+        && request.resource.data.email is string
+        && request.resource.data.role == "Applicant"
+        && request.resource.data.invitedBy == "Admissions Portal"
+        && request.resource.data.invitedByUid == "public-application"
+        && request.resource.data.invitedByRole == "Applicant"
+        && request.resource.data.status == "pending"
+        && request.resource.data.applicationId is string;
       allow update: if isSuperAdmin()
         || isBootstrapAdmin()
         || (

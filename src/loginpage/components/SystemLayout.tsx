@@ -14,6 +14,10 @@ const pageCopy: Record<string, { title: string; description: string }> = {
     title: 'User Management',
     description: 'Inspect users, departments, status, and role-based access assignments.',
   },
+  '/system/applications': {
+    title: 'Admissions Workspace',
+    description: 'Review applications, update admissions decisions, and follow up with applicants.',
+  },
   '/system/student-dashboard': {
     title: 'Student Dashboard',
     description: 'A learner-first workspace for progress, tasks, and academic visibility.',

@@ -15,7 +15,9 @@ import NotFound from './pages/NotFound';
 import AdminRoute from './components/AdminRoute';
 import { SystemLayout } from '@/loginpage/components/SystemLayout';
 import { PermissionGate } from '@/loginpage/components/PermissionGate';
+import { RoleGate } from '@/loginpage/components/RoleGate';
 import SystemIndexPage from '@/loginpage/pages';
+import ApplicationsPage from '@/loginpage/pages/applications';
 import UsersPage from '@/loginpage/pages/users';
 import RolesPage from '@/loginpage/pages/roles';
 import AcademicsPage from '@/loginpage/pages/academics';
@@ -47,6 +49,7 @@ const App = () => (
             <Route path="/invite-signup/:token" element={<InviteSignupPage />} />
             <Route path="/system" element={<AdminRoute><SystemLayout /></AdminRoute>}>
               <Route index element={<SystemIndexPage />} />
+              <Route path="applications" element={<RoleGate roles={['SuperAdmin', 'Headmaster', 'AdmissionsOfficer', 'DOS']}><ApplicationsPage /></RoleGate>} />
               <Route path="student-dashboard" element={<PermissionGate permission="view_marks"><StudentDashboardPage /></PermissionGate>} />
               <Route path="control-center" element={<PermissionGate permission="view_reports"><ControlCenterPage /></PermissionGate>} />
               <Route path="ai-hub" element={<PermissionGate permission="view_reports"><AiHubPage /></PermissionGate>} />
