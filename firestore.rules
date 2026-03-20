@@ -1,0 +1,228 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function accessProfileDoc(uid) {
+      return get(/databases/$(database)/documents/access_profiles/$(uid));
+    }
+
+    function isBootstrapAdmin() {
+      return isSignedIn()
+        && request.auth.token.email != null
+        && request.auth.token.email == "gilberttuyambaze00@gmail.com";
+    }
+
+    function isSuperAdmin() {
+      return isSignedIn()
+        && exists(/databases/$(database)/documents/access_profiles/$(request.auth.uid))
+        && accessProfileDoc(request.auth.uid).data.role == "SuperAdmin";
+    }
+
+    function currentRole() {
+      return isSignedIn()
+        && exists(/databases/$(database)/documents/access_profiles/$(request.auth.uid))
+          ? accessProfileDoc(request.auth.uid).data.role
+          : null;
+    }
+
+    function hasRole(role) {
+      return currentRole() == role;
+    }
+
+    function isStaffViewer() {
+      return isSignedIn()
+        && exists(/databases/$(database)/documents/access_profiles/$(request.auth.uid))
+        && accessProfileDoc(request.auth.uid).data.role in [
+          "SuperAdmin",
+          "Headmaster",
+          "DOS",
+          "DOD",
+          "Bursar",
+          "HOD",
+          "Teacher",
+          "ContentManager"
+        ];
+    }
+
+    function canInviteRole(targetRole) {
+      return isBootstrapAdmin()
+        || isSuperAdmin()
+        || (hasRole("Headmaster") && targetRole in [
+          "DOS",
+          "DOD",
+          "Bursar",
+          "HOD",
+          "Teacher",
+          "Student",
+          "StudentLeader",
+          "Animator",
+          "Animatress",
+          "Parent",
+          "ParentLeader",
+          "ContentManager",
+          "Applicant",
+          "Guest"
+        ])
+        || (hasRole("DOS") && targetRole in [
+          "HOD",
+          "Teacher",
+          "Student",
+          "StudentLeader",
+          "Applicant",
+          "Guest"
+        ])
+        || (hasRole("DOD") && targetRole in [
+          "Student",
+          "StudentLeader",
+          "Animator",
+          "Animatress",
+          "ParentLeader",
+          "Parent",
+          "Applicant",
+          "Guest"
+        ])
+        || (hasRole("Bursar") && targetRole in [
+          "Applicant",
+          "Guest"
+        ])
+        || (hasRole("HOD") && targetRole in [
+          "Teacher",
+          "Student",
+          "StudentLeader",
+          "Applicant",
+          "Guest"
+        ])
+        || (hasRole("Teacher") && targetRole in [
+          "Student",
+          "StudentLeader",
+          "Applicant"
+        ])
+        || (hasRole("StudentLeader") && targetRole in ["Student"])
+        || (hasRole("Animator") && targetRole in ["Student"])
+        || (hasRole("Animatress") && targetRole in ["Student"])
+        || (hasRole("ParentLeader") && targetRole in ["Parent"])
+        || (hasRole("ContentManager") && targetRole in ["Applicant", "Guest"]);
+    }
+
+    function inviteDoc(token) {
+      return get(/databases/$(database)/documents/invites/$(token));
+    }
+
+    function hasValidInviteToken(token) {
+      return exists(/databases/$(database)/documents/invites/$(token))
+        && inviteDoc(token).data.status == "pending";
+    }
+
+    match /access_profiles/{userId} {
+      allow read: if isSignedIn() && (request.auth.uid == userId || isSuperAdmin() || isBootstrapAdmin());
+      allow create: if isSuperAdmin()
+        || isBootstrapAdmin()
+        || (
+          isSignedIn()
+          && request.auth.uid == userId
+          && request.resource.data.inviteToken is string
+          && hasValidInviteToken(request.resource.data.inviteToken)
+          && request.auth.token.email != null
+          && request.resource.data.email == request.auth.token.email
+          && inviteDoc(request.resource.data.inviteToken).data.email == request.auth.token.email
+          && request.resource.data.role == inviteDoc(request.resource.data.inviteToken).data.role
+        );
+      allow update, delete: if isSuperAdmin() || isBootstrapAdmin();
+    }
+
+    match /students/{studentId} {
+      allow read: if isStaffViewer() || isSuperAdmin() || isBootstrapAdmin();
+      allow create, update, delete: if isSuperAdmin() || isBootstrapAdmin();
+    }
+
+    match /applications/{applicationId} {
+      allow read: if true;
+      allow create: if true;
+      allow update, delete: if isSuperAdmin() || isStaffViewer() || isBootstrapAdmin();
+    }
+
+    match /events/{eventId} {
+      allow read: if true;
+      allow create, update, delete: if isSuperAdmin() || isStaffViewer() || isBootstrapAdmin();
+    }
+
+    match /donations/{donationId} {
+      allow read: if isSuperAdmin() || isStaffViewer() || isBootstrapAdmin();
+      allow create: if true;
+      allow update, delete: if isSuperAdmin() || isBootstrapAdmin();
+    }
+
+    match /board_members/{memberId} {
+      allow read: if true;
+      allow create, update, delete: if isSuperAdmin() || isStaffViewer() || isBootstrapAdmin();
+    }
+
+    match /invites/{inviteId} {
+      allow get: if resource.data.status == "pending"
+        || isStaffViewer()
+        || isSuperAdmin()
+        || isBootstrapAdmin()
+        || (isSignedIn() && resource.data.invitedByUid == request.auth.uid);
+      allow list: if isStaffViewer()
+        || isSuperAdmin()
+        || isBootstrapAdmin()
+        || (isSignedIn() && resource.data.invitedByUid == request.auth.uid);
+      allow create: if isSignedIn()
+        && request.resource.data.email is string
+        && request.resource.data.role is string
+        && request.resource.data.invitedBy is string
+        && request.resource.data.invitedByUid is string
+        && request.resource.data.invitedByRole is string
+        && request.resource.data.status == "pending"
+        && request.resource.data.invitedByUid == request.auth.uid
+        && (isBootstrapAdmin() || request.resource.data.invitedByRole == currentRole())
+        && canInviteRole(request.resource.data.role);
+      allow update: if isSuperAdmin()
+        || isBootstrapAdmin()
+        || (
+          isSignedIn()
+          && request.auth.token.email != null
+          && request.auth.token.email == resource.data.email
+          && resource.data.status == "pending"
+          && request.resource.data.status == "accepted"
+          && request.resource.data.acceptedByUid == request.auth.uid
+          && request.resource.data.email == resource.data.email
+          && request.resource.data.role == resource.data.role
+          && request.resource.data.invitedByUid == resource.data.invitedByUid
+          && request.resource.data.invitedByRole == resource.data.invitedByRole
+        )
+        || (
+          isSignedIn()
+          && resource.data.status == "pending"
+          && resource.data.invitedByUid == request.auth.uid
+          && request.resource.data.email == resource.data.email
+          && request.resource.data.invitedBy == resource.data.invitedBy
+          && request.resource.data.invitedByUid == resource.data.invitedByUid
+          && request.resource.data.invitedByRole == resource.data.invitedByRole
+          && request.resource.data.status == resource.data.status
+          && canInviteRole(request.resource.data.role)
+        );
+      allow delete: if isSuperAdmin()
+        || isBootstrapAdmin()
+        || (isSignedIn() && resource.data.status == "pending" && resource.data.invitedByUid == request.auth.uid);
+    }
+
+    match /classes/{classId} {
+      allow read: if isSignedIn();
+      allow create, update, delete: if isSuperAdmin() || isBootstrapAdmin() || hasRole("Headmaster") || hasRole("DOS");
+    }
+
+    match /class_students/{membershipId} {
+      allow read: if isSignedIn();
+      allow create, update, delete: if isSuperAdmin() || isBootstrapAdmin() || hasRole("Headmaster") || hasRole("DOS") || hasRole("Teacher") || hasRole("HOD");
+    }
+
+    match /class_posts/{postId} {
+      allow read: if isSignedIn();
+      allow create, update, delete: if isSuperAdmin() || isBootstrapAdmin() || hasRole("Headmaster") || hasRole("DOS") || hasRole("Teacher") || hasRole("HOD");
+    }
+  }
+}
