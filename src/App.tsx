@@ -49,7 +49,7 @@ const App = () => (
             <Route path="/invite-signup/:token" element={<InviteSignupPage />} />
             <Route path="/system" element={<AdminRoute><SystemLayout /></AdminRoute>}>
               <Route index element={<SystemIndexPage />} />
-              <Route path="applications" element={<RoleGate roles={['SuperAdmin', 'Headmaster', 'AdmissionsOfficer', 'DOS']}><ApplicationsPage /></RoleGate>} />
+              <Route path="applications" element={<RoleGate roles={['SuperAdmin', 'Headmaster', 'AdmissionsOfficer', 'DOS', 'HOD']}><ApplicationsPage /></RoleGate>} />
               <Route path="student-dashboard" element={<PermissionGate permission="view_marks"><StudentDashboardPage /></PermissionGate>} />
               <Route path="control-center" element={<PermissionGate permission="view_reports"><ControlCenterPage /></PermissionGate>} />
               <Route path="ai-hub" element={<PermissionGate permission="view_reports"><AiHubPage /></PermissionGate>} />

@@ -47,7 +47,7 @@ const StudentPortal: React.FC = () => {
         return <Clock className="w-5 h-5 text-yellow-600" />
       case 'review':
         return <AlertCircle className="w-5 h-5 text-blue-600" />
-      case 'approved':
+      case 'admitted':
         return <CheckCircle className="w-5 h-5 text-green-600" />
       case 'rejected':
         return <XCircle className="w-5 h-5 text-red-600" />
@@ -64,7 +64,7 @@ const StudentPortal: React.FC = () => {
         return 'bg-yellow-100 text-yellow-800'
       case 'review':
         return 'bg-blue-100 text-blue-800'
-      case 'approved':
+      case 'admitted':
         return 'bg-green-100 text-green-800'
       case 'rejected':
         return 'bg-red-100 text-red-800'
@@ -81,8 +81,8 @@ const StudentPortal: React.FC = () => {
         return 'Your application has been received and is awaiting initial review.'
       case 'review':
         return 'Your application is currently under review by our admissions team.'
-      case 'approved':
-        return 'Congratulations! Your application has been approved. You will receive further instructions via email.'
+      case 'admitted':
+        return 'Congratulations. An admission decision has been made. Please review your decision section below for your next steps.'
       case 'rejected':
         return 'Unfortunately, your application was not successful this time. You may reapply next academic year.'
       case 'waitlist':
@@ -195,12 +195,12 @@ const StudentPortal: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Admin Notes */}
-                {application.admin_notes && (
+                {/* Decision Notes */}
+                {(application.decision_notes || application.admin_notes) && (
                   <div>
-                    <h4 className="font-semibold text-gray-900 mb-2">Additional Notes</h4>
+                    <h4 className="font-semibold text-gray-900 mb-2">Decision Section</h4>
                     <p className="text-gray-600 text-sm bg-blue-50 p-3 rounded-lg">
-                      {application.admin_notes}
+                      {application.decision_notes || application.admin_notes}
                     </p>
                   </div>
                 )}
@@ -215,14 +215,21 @@ const StudentPortal: React.FC = () => {
                     {application.status === 'review' && (
                       <p>Our admissions team is carefully reviewing your application. This process typically takes 5-10 business days.</p>
                     )}
-                    {application.status === 'approved' && (
-                      <p>Please check your email for enrollment instructions and required documents. Contact us if you haven't received the email within 24 hours.</p>
+                    {application.status === 'admitted' && (
+                      <div className="space-y-2">
+                        <p>Congratulations on your admission to Nyagatare Secondary School. Please review the decision note above and follow the onboarding instructions.</p>
+                        {application.applicant_signup_url ? (
+                          <a href={application.applicant_signup_url} className="inline-flex rounded-md bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700">
+                            Create Applicant Account
+                          </a>
+                        ) : null}
+                      </div>
                     )}
                     {application.status === 'waitlist' && (
                       <p>You're on our waitlist. We'll contact you immediately if a spot becomes available. Continue to check this portal for updates.</p>
                     )}
                     {application.status === 'rejected' && (
-                      <p>We encourage you to reapply next academic year. Consider strengthening your application with additional achievements or improved grades.</p>
+                      <p>We appreciate your interest in Nyagatare Secondary School. Please review the decision section above for the outcome note and future guidance.</p>
                     )}
                   </div>
                 </div>

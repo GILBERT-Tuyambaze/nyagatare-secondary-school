@@ -35,10 +35,11 @@ export interface Application {
   preferred_subjects?: string
   achievements?: string
   motivation: string
-  status: 'pending' | 'review' | 'approved' | 'rejected' | 'waitlist'
+  status: 'pending' | 'review' | 'admitted' | 'rejected' | 'waitlist'
   score: number
   admin_notes?: string
   communication_notes?: string
+  decision_notes?: string
   applicant_invite_id?: string
   applicant_signup_url?: string
   assigned_to?: string

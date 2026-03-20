@@ -41,6 +41,7 @@ const invitesCollection = collection(db, 'invites')
 const classesCollection = collection(db, 'classes')
 const classStudentsCollection = collection(db, 'class_students')
 const classPostsCollection = collection(db, 'class_posts')
+const systemSettingsCollection = collection(db, 'system_settings')
 
 const mockBoardMembers: BoardMember[] = [
   {
@@ -562,6 +563,34 @@ export const getClasses = async () => {
     console.error('Error fetching classes:', error)
     return []
   }
+}
+
+export const getApplicationsSettings = async () => {
+  try {
+    const snapshot = await getDoc(doc(systemSettingsCollection, 'applications'))
+    if (!snapshot.exists()) {
+      return { isOpen: true }
+    }
+    return { isOpen: snapshot.data().isOpen !== false }
+  } catch (error) {
+    console.error('Error fetching application settings:', error)
+    return { isOpen: true }
+  }
+}
+
+export const updateApplicationsSettings = async (isOpen: boolean) => {
+  const settingsRef = doc(systemSettingsCollection, 'applications')
+  await setDoc(
+    settingsRef,
+    {
+      isOpen,
+      updated_at: nowIso(),
+    },
+    { merge: true }
+  )
+
+  const snapshot = await getDoc(settingsRef)
+  return { isOpen: snapshot.data()?.isOpen !== false }
 }
 
 export const getClassStudents = async () => {

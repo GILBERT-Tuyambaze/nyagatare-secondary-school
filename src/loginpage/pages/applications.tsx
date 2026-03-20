@@ -6,11 +6,12 @@ import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import { useAuth } from '@/contexts/AuthContext'
-import { getApplications, updateApplication } from '@/services/firestoreService'
+import { getApplications, getApplicationsSettings, updateApplication, updateApplicationsSettings } from '@/services/firestoreService'
 import { Application } from '@/types/database'
 import { Card } from '../components/Card'
+import { admissionsDecisionStatuses } from '../lib/admissions'
 
-const statusOptions: Application['status'][] = ['pending', 'review', 'approved', 'waitlist', 'rejected']
+const statusOptions: Application['status'][] = [...admissionsDecisionStatuses]
 
 export default function ApplicationsPage() {
   const { accessProfile } = useAuth()
@@ -20,16 +21,21 @@ export default function ApplicationsPage() {
   const [statusFilter, setStatusFilter] = useState<'all' | Application['status']>('all')
   const [notes, setNotes] = useState('')
   const [communicationNotes, setCommunicationNotes] = useState('')
+  const [decisionNotes, setDecisionNotes] = useState('')
+  const [applicationsOpen, setApplicationsOpen] = useState(true)
   const [working, setWorking] = useState(false)
   const [message, setMessage] = useState('')
 
   const loadApplications = async () => {
     const data = await getApplications()
+    const settings = await getApplicationsSettings()
+    setApplicationsOpen(settings.isOpen)
     setApplications(data)
     if (!selectedId && data[0]) {
       setSelectedId(data[0].id)
       setNotes(data[0].admin_notes || '')
       setCommunicationNotes(data[0].communication_notes || '')
+      setDecisionNotes(data[0].decision_notes || '')
     }
   }
 
@@ -59,6 +65,7 @@ export default function ApplicationsPage() {
       setSelectedId(selectedApplication.id)
       setNotes(selectedApplication.admin_notes || '')
       setCommunicationNotes(selectedApplication.communication_notes || '')
+      setDecisionNotes(selectedApplication.decision_notes || '')
     }
   }, [selectedApplication?.id])
 
@@ -69,10 +76,11 @@ export default function ApplicationsPage() {
     try {
       await updateApplication(selectedApplication.id, {
         status,
+        decision_notes: status === 'admitted' || status === 'rejected' ? decisionNotes : selectedApplication.decision_notes,
         reviewed_by: accessProfile.displayName,
         reviewed_at: new Date().toISOString(),
       })
-      setMessage(`Application status updated to ${status}.`)
+      setMessage(`Application decision updated to ${status}.`)
       await loadApplications()
     } catch (error) {
       setMessage(error instanceof Error ? error.message : 'Failed to update application status.')
@@ -89,6 +97,7 @@ export default function ApplicationsPage() {
       await updateApplication(selectedApplication.id, {
         admin_notes: notes,
         communication_notes: communicationNotes,
+        decision_notes: decisionNotes,
         last_contacted_by: accessProfile.displayName,
         last_contacted_at: communicationNotes.trim() ? new Date().toISOString() : selectedApplication.last_contacted_at,
       })
@@ -101,9 +110,41 @@ export default function ApplicationsPage() {
     }
   }
 
+  const handleToggleApplications = async () => {
+    setWorking(true)
+    setMessage('')
+    try {
+      const settings = await updateApplicationsSettings(!applicationsOpen)
+      setApplicationsOpen(settings.isOpen)
+      setMessage(settings.isOpen ? 'Application intake is now open.' : 'Application intake is now closed.')
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'Failed to update application intake setting.')
+    } finally {
+      setWorking(false)
+    }
+  }
+
   return (
     <div className="space-y-6">
       <Card title="Admissions Workspace" description="Applications saved from the public form, review access for Admin, Headmaster, DOS, and Admissions Office.">
+        <div className="mb-6 flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-slate-700 bg-slate-900/85 p-4">
+          <div>
+            <p className="text-sm font-semibold text-white">Application Intake</p>
+            <p className="mt-1 text-sm text-slate-300">
+              {applicationsOpen ? 'Applications are currently open for new applicants.' : 'Applications are currently closed.'}
+            </p>
+          </div>
+          <Button
+            type="button"
+            variant="outline"
+            className="border-slate-600 bg-slate-900/80 text-slate-100 hover:border-cyan-400/40 hover:bg-slate-800 hover:text-white"
+            onClick={handleToggleApplications}
+            disabled={working}
+          >
+            {applicationsOpen ? 'Close Applications' : 'Open Applications'}
+          </Button>
+        </div>
+
         <div className="grid gap-4 lg:grid-cols-[0.95fr_1.05fr]">
           <div className="space-y-4">
             <div className="grid gap-3 sm:grid-cols-2">
@@ -218,6 +259,17 @@ export default function ApplicationsPage() {
                     onChange={(event) => setCommunicationNotes(event.target.value)}
                     className="min-h-[120px] border-slate-700 bg-slate-950/80 text-slate-100 placeholder:text-slate-500"
                     placeholder="Track follow-up messages, calls, or next-step communication with the applicant."
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="decision-notes">Decision Notes</Label>
+                  <Textarea
+                    id="decision-notes"
+                    value={decisionNotes}
+                    onChange={(event) => setDecisionNotes(event.target.value)}
+                    className="min-h-[120px] border-slate-700 bg-slate-950/80 text-slate-100 placeholder:text-slate-500"
+                    placeholder="Write the formal admissions decision note that the applicant should review."
                   />
                 </div>
 

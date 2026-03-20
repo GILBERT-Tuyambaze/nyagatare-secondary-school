@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { ArrowRight, CheckCircle } from 'lucide-react'
 import Header from '@/components/Header'
 import Footer from '@/components/Footer'
-import { createApplicantInvite, createApplication, updateApplication } from '@/services/firestoreService'
+import { createApplicantInvite, createApplication, getApplicationsSettings, updateApplication } from '@/services/firestoreService'
 
 type ApplicationFormState = {
   first_name: string
@@ -62,6 +62,7 @@ export default function Enrollment() {
   const [formState, setFormState] = useState<ApplicationFormState>(initialFormState)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
+  const [applicationsOpen, setApplicationsOpen] = useState(true)
   const [success, setSuccess] = useState<{
     applicationId: string
     signupUrl?: string
@@ -73,6 +74,10 @@ export default function Enrollment() {
   const updateField = <K extends keyof ApplicationFormState>(field: K, value: ApplicationFormState[K]) => {
     setFormState((current) => ({ ...current, [field]: value }))
   }
+
+  useEffect(() => {
+    getApplicationsSettings().then((settings) => setApplicationsOpen(settings.isOpen))
+  }, [])
 
   const stepErrors = useMemo(() => {
     if (currentStep === 1) {
@@ -107,6 +112,11 @@ export default function Enrollment() {
   }
 
   const handleSubmit = async () => {
+    if (!applicationsOpen) {
+      setError('Applications are currently closed. Please try again later.')
+      return
+    }
+
     setSubmitting(true)
     setError('')
 
@@ -206,6 +216,17 @@ export default function Enrollment() {
       <Header />
       <div className="min-h-screen bg-gray-50 py-12">
         <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
+          {!applicationsOpen ? (
+            <Card className="mb-8 border-orange-200 bg-orange-50">
+              <CardContent className="p-6">
+                <p className="text-lg font-semibold text-gray-900">Applications are currently closed.</p>
+                <p className="mt-2 text-sm text-gray-700">
+                  Admissions intake has been paused by school leadership. Please check back later or contact the admissions office.
+                </p>
+              </CardContent>
+            </Card>
+          ) : null}
+
           <div className="mb-8 text-center">
             <h1 className="mb-4 text-4xl font-bold text-gray-900">Student Enrollment Application</h1>
             <p className="text-xl text-gray-600">Join Nyagatare Secondary School and start your admissions journey.</p>

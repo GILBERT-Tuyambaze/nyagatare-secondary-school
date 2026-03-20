@@ -13,7 +13,7 @@ const navItems: Array<{
   roles?: Role[]
 }> = [
   { label: 'Dashboard', to: '/system', icon: Home },
-  { label: 'Applications', to: '/system/applications', icon: FileText, roles: ['SuperAdmin', 'Headmaster', 'AdmissionsOfficer', 'DOS'] },
+  { label: 'Applications', to: '/system/applications', icon: FileText, roles: ['SuperAdmin', 'Headmaster', 'AdmissionsOfficer', 'DOS', 'HOD'] },
   { label: 'Student', to: '/system/student-dashboard', icon: BookOpen, permission: 'view_marks' },
   { label: 'Control Center', to: '/system/control-center', icon: LayoutDashboard, permission: 'view_reports' },
   { label: 'AI Hub', to: '/system/ai-hub', icon: BrainCircuit, permission: 'view_reports' },
