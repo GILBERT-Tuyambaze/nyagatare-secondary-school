@@ -103,24 +103,5 @@ export default defineConfig(({ command, mode }) => {
         "@": path.resolve(__dirname, "./src"),
       },
     },
-    build: {
-      rollupOptions: {
-        output: {
-          manualChunks(id) {
-            if (id.includes("node_modules")) {
-              if (id.includes("/react/") || id.includes("\\react\\") || id.includes("react-dom")) return "react-vendor";
-              if (id.includes("firebase/auth")) return "firebase-auth";
-              if (id.includes("firebase/firestore")) return "firebase-firestore";
-              if (id.includes("firebase/storage")) return "firebase-storage";
-              if (id.includes("firebase/app")) return "firebase-core";
-              if (id.includes("firebase")) return "firebase-shared";
-              if (id.includes("react-router")) return "router";
-              if (id.includes("@radix-ui")) return "radix";
-              if (id.includes("@tanstack")) return "query";
-            }
-          },
-        },
-      },
-    },
   };
 });
