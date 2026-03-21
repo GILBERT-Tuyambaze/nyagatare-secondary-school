@@ -108,6 +108,7 @@ export default defineConfig(({ command, mode }) => {
         output: {
           manualChunks(id) {
             if (id.includes("node_modules")) {
+              if (id.includes("/react/") || id.includes("\\react\\") || id.includes("react-dom")) return "react-vendor";
               if (id.includes("firebase/auth")) return "firebase-auth";
               if (id.includes("firebase/firestore")) return "firebase-firestore";
               if (id.includes("firebase/storage")) return "firebase-storage";
@@ -117,9 +118,6 @@ export default defineConfig(({ command, mode }) => {
               if (id.includes("@radix-ui")) return "radix";
               if (id.includes("@tanstack")) return "query";
             }
-
-            if (id.includes("/src/loginpage/")) return "system";
-            if (id.includes("/src/pages/")) return "public-pages";
           },
         },
       },
