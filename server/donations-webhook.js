@@ -1,4 +1,4 @@
-import { updateDonation } from '../src/services/firestoreService.js'
+import { patchFirestoreDocument } from './firebase-rest.js'
 
 export async function handleDonationWebhookRequest(request) {
   if (request.method !== 'POST') {
@@ -32,10 +32,11 @@ export async function handleDonationWebhookRequest(request) {
           ? 'failed'
           : 'pending'
 
-    await updateDonation(donationId, {
+    await patchFirestoreDocument('donations', donationId, {
       payment_status: mappedStatus,
       payment_reference: event?.data?.flw_ref || txRef,
       payment_link: event?.data?.link || undefined,
+      updated_at: new Date().toISOString(),
     })
 
     return new Response(JSON.stringify({ received: true }), { status: 200 })

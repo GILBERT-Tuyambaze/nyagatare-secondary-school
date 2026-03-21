@@ -1,4 +1,4 @@
-import { updateDonation } from '../src/services/firestoreService.js'
+import { patchFirestoreDocument } from './firebase-rest.js'
 
 export async function handleDonationVerifyRequest(request) {
   if (request.method !== 'POST') {
@@ -35,10 +35,11 @@ export async function handleDonationVerifyRequest(request) {
           : 'pending'
 
     if (metaDonationId) {
-      await updateDonation(metaDonationId, {
+      await patchFirestoreDocument('donations', metaDonationId, {
         payment_status: mappedStatus,
         payment_reference: data?.data?.flw_ref || tx_ref,
         payment_link: data?.data?.link || undefined,
+        updated_at: new Date().toISOString(),
       })
     }
 

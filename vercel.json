@@ -1,4 +1,7 @@
 {
+  "typescript": {
+    "config": "tsconfig.json"
+  },
   "rewrites": [
     { "source": "/api/(.*)", "destination": "/api/$1" },
     { "source": "/(.*)", "destination": "/" }
