@@ -68,6 +68,7 @@ const chatThreadsCollection = collection(db, 'chat_threads')
 const chatMessagesCollection = collection(db, 'chat_messages')
 const disciplineCasesCollection = collection(db, 'discipline_cases')
 const activityLogsCollection = collection(db, 'activity_logs')
+const donationReceiptsPath = 'donation_receipts'
 const classesCollection = collection(db, 'classes')
 const classStudentsCollection = collection(db, 'class_students')
 const classPostsCollection = collection(db, 'class_posts')
@@ -300,6 +301,29 @@ export const uploadApplicantReport = async (file: File) => {
     contentType: file.type || 'application/octet-stream',
     customMetadata: {
       uploadedFor: 'application-report',
+      originalName: file.name,
+    },
+  })
+
+  const downloadUrl = await getDownloadURL(storageRef)
+
+  return {
+    downloadUrl,
+    storagePath: objectPath,
+    fileName: file.name,
+  }
+}
+
+export const uploadDonationReceipt = async (file: File) => {
+  const extension = file.name.includes('.') ? file.name.slice(file.name.lastIndexOf('.')) : ''
+  const safeName = createSafeFileName(file.name.replace(extension, ''))
+  const objectPath = `${donationReceiptsPath}/${Date.now()}-${createInviteToken()}-${safeName}${extension}`
+  const storageRef = ref(storage, objectPath)
+
+  await uploadBytes(storageRef, file, {
+    contentType: file.type || 'application/octet-stream',
+    customMetadata: {
+      uploadedFor: 'donation-receipt',
       originalName: file.name,
     },
   })
@@ -715,15 +739,62 @@ export const getDonations = async () => {
 export const createDonation = async (donation: Omit<Donation, 'id' | 'created_at' | 'updated_at'>) => {
   try {
     const created_at = nowIso()
-    const document = {
+    const document = removeUndefined({
       ...donation,
+      donor_name: donation.is_anonymous ? 'Anonymous donor' : donation.donor_name.trim(),
+      donor_email: donation.donor_email?.trim().toLowerCase() || undefined,
+      donor_phone: donation.donor_phone?.trim() || undefined,
+      payment_method: donation.payment_method?.trim() || undefined,
+      payment_provider: donation.payment_provider || undefined,
+      payment_link: donation.payment_link || undefined,
+      payment_reference: donation.payment_reference?.trim() || undefined,
+      receipt_url: donation.receipt_url?.trim() || undefined,
+      receipt_path: donation.receipt_path?.trim() || undefined,
+      message: donation.message?.trim() || undefined,
       created_at,
       updated_at: created_at,
-    }
+    })
     const ref = await addDoc(donationsCollection, document)
     return withId(ref.id, document) as Donation
   } catch (error) {
     console.error('Error creating donation:', error)
+    throw error
+  }
+}
+
+export const updateDonation = async (id: string, updates: Partial<Donation>) => {
+  try {
+    const documentRef = doc(donationsCollection, id)
+    await updateDoc(
+      documentRef,
+      removeUndefined({
+        ...updates,
+        donor_name: updates.donor_name?.trim(),
+        donor_email: updates.donor_email?.trim().toLowerCase() || undefined,
+        donor_phone: updates.donor_phone?.trim() || undefined,
+        payment_method: updates.payment_method?.trim() || undefined,
+        payment_provider: updates.payment_provider || undefined,
+        payment_link: updates.payment_link || undefined,
+        payment_reference: updates.payment_reference?.trim() || undefined,
+        receipt_url: updates.receipt_url?.trim() || undefined,
+        receipt_path: updates.receipt_path?.trim() || undefined,
+        message: updates.message?.trim() || undefined,
+        updated_at: nowIso(),
+      })
+    )
+    const snapshot = await getDoc(documentRef)
+    return withId(snapshot.id, snapshot.data()) as Donation
+  } catch (error) {
+    console.error('Error updating donation:', error)
+    throw error
+  }
+}
+
+export const deleteDonation = async (id: string) => {
+  try {
+    await deleteDoc(doc(donationsCollection, id))
+  } catch (error) {
+    console.error('Error deleting donation:', error)
     throw error
   }
 }
@@ -1271,6 +1342,36 @@ export const getNewsletterSubscribers = async () => {
   } catch (error) {
     console.error('Error fetching newsletter subscribers:', error)
     return []
+  }
+}
+
+export const updateNewsletterSubscriber = async (
+  id: string,
+  updates: Partial<NewsletterSubscriber> & Record<string, unknown>
+) => {
+  try {
+    const documentRef = doc(newsletterSubscribersCollection, id)
+    await updateDoc(
+      documentRef,
+      removeUndefined({
+        ...updates,
+        updated_at: nowIso(),
+      })
+    )
+    const snapshot = await getDoc(documentRef)
+    return withId(snapshot.id, snapshot.data()) as NewsletterSubscriber
+  } catch (error) {
+    console.error('Error updating newsletter subscriber:', error)
+    throw error
+  }
+}
+
+export const deleteNewsletterSubscriber = async (id: string) => {
+  try {
+    await deleteDoc(doc(newsletterSubscribersCollection, id))
+  } catch (error) {
+    console.error('Error deleting newsletter subscriber:', error)
+    throw error
   }
 }
 

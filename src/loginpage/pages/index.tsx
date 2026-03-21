@@ -816,6 +816,92 @@ export default function SystemIndexPage() {
 
           <RoleWorkspaceList {...hodLists[1]} />
         </div>
+      ) : isTeacher ? (
+        <div className="space-y-6">
+          <Card title="Teacher Teaching Home" description="A cleaner teaching launchpad centered on assigned classes, learning delivery, and learner follow-up.">
+            <div className="grid gap-4 lg:grid-cols-[1.05fr,0.95fr]">
+              <div className="rounded-3xl border border-slate-800 bg-slate-900/60 p-5">
+                <p className="text-xs uppercase tracking-[0.25em] text-cyan-200">Teaching Role</p>
+                <h2 className="mt-3 text-3xl font-bold text-white">Teacher Workspace</h2>
+                <p className="mt-3 text-sm leading-6 text-slate-300">
+                  Focus on your assigned classes, active subjects, marks, and the student support flow that sits around them.
+                </p>
+              </div>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="rounded-3xl border border-slate-800 bg-slate-900/60 p-5">
+                  <p className="text-sm text-slate-400">Assigned Subjects</p>
+                  <p className="mt-2 text-3xl font-bold text-cyan-100">{teacherSubjectIds.length}</p>
+                  <p className="mt-2 text-sm text-slate-300">Subjects this teacher can actively deliver and report on.</p>
+                </div>
+                <div className="rounded-3xl border border-slate-800 bg-slate-900/60 p-5">
+                  <p className="text-sm text-slate-400">Learner Marks Visible</p>
+                  <p className="mt-2 text-3xl font-bold text-cyan-100">{teacherMarks.length}</p>
+                  <p className="mt-2 text-sm text-slate-300">Subject marks currently attached to this teaching scope.</p>
+                </div>
+              </div>
+            </div>
+          </Card>
+
+          <RoleWorkspaceStats
+            title="Teaching Snapshot"
+            description="The main teaching indicators for this session."
+            items={teacherStats}
+          />
+
+          <div className="grid gap-6 2xl:grid-cols-[0.95fr,1.05fr]">
+            <RoleWorkspaceActions
+              title="Teacher Actions"
+              description="Fast routes into the teaching work you do most."
+              actions={teacherActions}
+            />
+            <RoleWorkspaceList {...teacherLists[0]} />
+          </div>
+
+          <RoleWorkspaceList {...teacherLists[1]} />
+        </div>
+      ) : isStudent ? (
+        <div className="space-y-6">
+          <Card title="Student Learning Home" description="A learner-first landing page for class access, subject progress, and academic follow-up.">
+            <div className="grid gap-4 lg:grid-cols-[1.05fr,0.95fr]">
+              <div className="rounded-3xl border border-slate-800 bg-slate-900/60 p-5">
+                <p className="text-xs uppercase tracking-[0.25em] text-cyan-200">Learner View</p>
+                <h2 className="mt-3 text-3xl font-bold text-white">Student Workspace</h2>
+                <p className="mt-3 text-sm leading-6 text-slate-300">
+                  Stay focused on your class, the next learning tasks, teacher comments, and the marks that are already available.
+                </p>
+              </div>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="rounded-3xl border border-slate-800 bg-slate-900/60 p-5">
+                  <p className="text-sm text-slate-400">Current Class</p>
+                  <p className="mt-2 text-2xl font-bold text-cyan-100">{studentClass?.name || 'Not linked yet'}</p>
+                  <p className="mt-2 text-sm text-slate-300">Your live class assignment in the system.</p>
+                </div>
+                <div className="rounded-3xl border border-slate-800 bg-slate-900/60 p-5">
+                  <p className="text-sm text-slate-400">Marks Available</p>
+                  <p className="mt-2 text-3xl font-bold text-cyan-100">{studentMarks.length}</p>
+                  <p className="mt-2 text-sm text-slate-300">Subjects already showing marks and teacher comments.</p>
+                </div>
+              </div>
+            </div>
+          </Card>
+
+          <RoleWorkspaceStats
+            title="Learning Snapshot"
+            description="A lighter, learner-friendly view of what matters now."
+            items={studentStats}
+          />
+
+          <div className="grid gap-6 2xl:grid-cols-[0.95fr,1.05fr]">
+            <RoleWorkspaceActions
+              title="Student Actions"
+              description="Direct routes into your class, marks, and support tools."
+              actions={studentActions}
+            />
+            <RoleWorkspaceList {...studentLists[0]} />
+          </div>
+
+          <RoleWorkspaceList {...studentLists[1]} />
+        </div>
       ) : (
         <div className="space-y-6">
           <Card title="Your Workspace" description="A cleaner role summary with direct focus on what this session can do right now.">

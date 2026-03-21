@@ -188,7 +188,7 @@ export function UserTable({
 
       <div className="grid gap-5 xl:grid-cols-[minmax(0,1.5fr)_minmax(320px,0.9fr)]">
         <div className="overflow-hidden rounded-3xl border border-slate-800 bg-slate-950/70">
-          <div className="max-h-[32rem] overflow-auto">
+          <div className="max-h-[38rem] overflow-auto">
             <Table>
               <TableHeader className="sticky top-0 z-10 bg-slate-950/95 backdrop-blur">
                 <TableRow className="border-slate-800 hover:bg-transparent">
@@ -201,7 +201,11 @@ export function UserTable({
               <TableBody>
                 {visibleUsers.map((user) => {
                   const isActive = user.id === selectedUserId
-                  const masked = user.isGhost && user.id !== viewerUid && user.email.toLowerCase() !== normalizedViewerEmail
+                  const masked =
+                    viewerRole !== 'SuperAdmin' &&
+                    user.isGhost &&
+                    user.id !== viewerUid &&
+                    user.email.toLowerCase() !== normalizedViewerEmail
 
                   return (
                     <TableRow
@@ -235,7 +239,7 @@ export function UserTable({
           </div>
         </div>
 
-        <div className="rounded-3xl border border-slate-800 bg-slate-950/80 p-5">
+        <div className="self-start rounded-3xl border border-slate-800 bg-slate-950/80 p-5 xl:sticky xl:top-6 xl:max-h-[38rem] xl:overflow-auto">
           {selectedUser && formState ? (
             <div className="space-y-5">
               <div className="flex items-start justify-between gap-3">

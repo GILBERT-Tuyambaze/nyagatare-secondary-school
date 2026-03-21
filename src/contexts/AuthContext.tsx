@@ -119,21 +119,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
 
       const role = data.role && data.role in rolePermissions ? data.role : fallbackProfile.role
-      const isSuperAdminProfile = role === 'SuperAdmin'
-      const resolvedName = isSuperAdminProfile
-        ? 'System Ghost'
-        : data.displayName || data.fullName || fallbackProfile.displayName
-
       return {
         email: nextUser.email ?? data.email ?? null,
-        displayName: resolvedName,
-        fullName: isSuperAdminProfile ? 'System Ghost' : data.fullName || data.displayName || fallbackProfile.fullName,
+        displayName: data.displayName || data.fullName || fallbackProfile.displayName,
+        fullName: data.fullName || data.displayName || fallbackProfile.fullName,
         role,
         permissions: Array.isArray(data.permissions) && data.permissions.length > 0 ? data.permissions : rolePermissions[role],
         department: data.department || fallbackProfile.department,
         status: data.status || fallbackProfile.status,
-        isGhost: Boolean(isSuperAdminProfile || data.isGhost || fallbackProfile.isGhost),
-        isProtected: Boolean(isSuperAdminProfile || data.isProtected || fallbackProfile.isProtected),
+        isGhost: Boolean(data.isGhost ?? fallbackProfile.isGhost),
+        isProtected: Boolean(data.isProtected ?? fallbackProfile.isProtected),
       }
     } catch (error) {
       console.error('Failed to load access profile from Firestore:', error)

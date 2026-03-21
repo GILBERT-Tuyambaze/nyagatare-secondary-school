@@ -233,7 +233,22 @@ service cloud.firestore {
     match /donations/{donationId} {
       allow read: if isSuperAdmin() || isStaffViewer() || isBootstrapAdmin();
       allow create: if true;
-      allow update, delete: if isSuperAdmin() || isBootstrapAdmin();
+      allow update, delete: if isSuperAdmin()
+        || isBootstrapAdmin()
+        || hasRole("Headmaster")
+        || hasRole("Bursar");
+    }
+
+    match /newsletter_subscribers/{subscriberId} {
+      allow read: if isSuperAdmin() || isStaffViewer() || isBootstrapAdmin();
+      allow create: if true;
+      allow update, delete: if isSuperAdmin()
+        || isBootstrapAdmin()
+        || hasRole("Headmaster")
+        || hasRole("ContentManager")
+        || hasRole("DOS")
+        || hasRole("DOD")
+        || hasRole("HOD");
     }
 
     match /board_members/{memberId} {

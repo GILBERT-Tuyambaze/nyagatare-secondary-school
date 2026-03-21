@@ -12,6 +12,7 @@ const Index = lazy(() => import('./pages/Index'));
 const Enrollment = lazy(() => import('./pages/Enrollment'));
 const Events = lazy(() => import('./pages/Events'));
 const Blog = lazy(() => import('./pages/Blog'));
+const DonationComplete = lazy(() => import('./pages/DonationComplete'));
 const BoardMembers = lazy(() => import('./pages/BoardMembers'));
 const StudentPortal = lazy(() => import('./pages/StudentPortal'));
 const LoginPage = lazy(() => import('./pages/LoginPage'));
@@ -89,6 +90,7 @@ const App = () => (
               <Route path="/applicant-portal" element={<StudentPortal />} />
               <Route path="/student-portal" element={<LegacyApplicantPortalRedirect />} />
               <Route path="/login" element={<LoginPage />} />
+              <Route path="/donation-complete" element={<DonationComplete />} />
               <Route path="/invite-signup/:token" element={<InviteSignupPage />} />
               <Route path="/system" element={<AdminRoute><SystemLayout /></AdminRoute>}>
                 <Route index element={<SystemIndexPage />} />

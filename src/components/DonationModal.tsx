@@ -5,8 +5,10 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
-import { Heart, CreditCard, Loader2, CheckCircle } from 'lucide-react';
+import { Heart, CreditCard, Loader2, CheckCircle, Link as LinkIcon } from 'lucide-react';
 import { toast } from 'sonner';
+import { createDonation, uploadDonationReceipt } from '@/services/firestoreService';
+import { Donation } from '@/types/database';
 
 interface DonationModalProps {
   open: boolean;
@@ -18,10 +20,31 @@ export const DonationModal = ({ open, onOpenChange }: DonationModalProps) => {
   const [donationType, setDonationType] = useState('');
   const [donorName, setDonorName] = useState('');
   const [donorEmail, setDonorEmail] = useState('');
+  const [donorPhone, setDonorPhone] = useState('');
+  const [paymentMethod, setPaymentMethod] = useState('');
+  const [paymentReference, setPaymentReference] = useState('');
   const [message, setMessage] = useState('');
   const [isAnonymous, setIsAnonymous] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
+  const [savedDonationAmount, setSavedDonationAmount] = useState('');
+  const [checkoutUrl, setCheckoutUrl] = useState('');
+  const [receiptFile, setReceiptFile] = useState<File | null>(null);
+
+  const resetForm = () => {
+    setAmount('');
+    setDonationType('');
+    setDonorName('');
+    setDonorEmail('');
+    setDonorPhone('');
+    setPaymentMethod('');
+    setPaymentReference('');
+    setMessage('');
+    setIsAnonymous(false);
+    setSavedDonationAmount('');
+    setReceiptFile(null);
+    setCheckoutUrl('');
+  };
 
   const predefinedAmounts = [25000, 50000, 100000, 250000]; // RWF amounts
 
@@ -43,26 +66,99 @@ export const DonationModal = ({ open, onOpenChange }: DonationModalProps) => {
       return;
     }
 
+    if (donorEmail) {
+      const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailPattern.test(donorEmail.trim().toLowerCase())) {
+        toast.error('Please provide a valid email address');
+        return;
+      }
+    }
+
     setIsProcessing(true);
 
-    // Simulate payment processing
-    setTimeout(() => {
+    try {
+      const donationBase: Omit<Donation, 'id' | 'created_at' | 'updated_at'> = {
+        donor_name: isAnonymous ? 'Anonymous donor' : donorName.trim(),
+        donor_email: isAnonymous ? undefined : donorEmail.trim().toLowerCase(),
+        donor_phone: donorPhone.trim() || undefined,
+        amount: Number(amount),
+        currency: 'RWF',
+        donation_type: donationType as Donation['donation_type'],
+        payment_method: paymentMethod || undefined,
+        payment_provider:
+          paymentMethod === 'flutterwave'
+            ? 'flutterwave'
+            : paymentMethod === 'bank_transfer'
+              ? 'bank_transfer'
+              : paymentMethod === 'cash'
+                ? 'cash'
+                : paymentMethod
+                  ? 'other'
+                  : undefined,
+        payment_status: 'pending',
+        payment_reference: paymentReference.trim() || undefined,
+        message: message.trim() || undefined,
+        is_anonymous: isAnonymous,
+      };
+
+      // upload receipt for bank transfer if provided
+      let receiptUrl: string | undefined
+      let receiptPath: string | undefined
+      if (paymentMethod === 'bank_transfer' && receiptFile) {
+        const uploaded = await uploadDonationReceipt(receiptFile)
+        receiptUrl = uploaded.downloadUrl
+        receiptPath = uploaded.storagePath
+      }
+
+      const saved = await createDonation({
+        ...donationBase,
+        receipt_url: receiptUrl,
+        receipt_path: receiptPath,
+      });
+
+      if (paymentMethod === 'flutterwave') {
+        const response = await fetch('/api/donations-intent', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            amount: Number(amount),
+            currency: 'RWF',
+            email: isAnonymous ? undefined : donorEmail.trim().toLowerCase(),
+            name: isAnonymous ? 'Anonymous donor' : donorName.trim(),
+            donationId: saved.id,
+            donationType,
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error('Could not start payment');
+        }
+
+        const result = await response.json();
+        const link = result?.data?.link;
+        if (!link) {
+          throw new Error('Payment link missing');
+        }
+
+        setCheckoutUrl(link);
+        window.location.href = link;
+      } else {
+        setSavedDonationAmount(amount);
+        setIsSuccess(true);
+        toast.success('Your donation has been recorded. Please complete payment using the reference provided.');
+        setTimeout(() => {
+          setIsSuccess(false);
+          resetForm();
+          onOpenChange(false);
+        }, 3000);
+      }
+
       setIsProcessing(false);
-      setIsSuccess(true);
-      toast.success('Thank you for your generous donation!');
-      
-      // Reset form after success
-      setTimeout(() => {
-        setIsSuccess(false);
-        setAmount('');
-        setDonationType('');
-        setDonorName('');
-        setDonorEmail('');
-        setMessage('');
-        setIsAnonymous(false);
-        onOpenChange(false);
-      }, 3000);
-    }, 2000);
+    } catch (error) {
+      console.error('Failed to submit donation:', error);
+      setIsProcessing(false);
+      toast.error('We could not record your donation right now. Please try again.');
+    }
   };
 
   if (isSuccess) {
@@ -73,11 +169,17 @@ export const DonationModal = ({ open, onOpenChange }: DonationModalProps) => {
             <CheckCircle className="mx-auto h-16 w-16 text-green-500 mb-4" />
             <h3 className="text-2xl font-bold text-gray-900 mb-2">Thank You!</h3>
             <p className="text-gray-600 mb-4">
-              Your donation of {parseFloat(amount).toLocaleString()} RWF has been received.
+              Your donation request of {parseFloat(savedDonationAmount || amount).toLocaleString()} RWF has been recorded.
             </p>
             <p className="text-sm text-gray-500">
-              You will receive a confirmation email shortly.
+              Our finance team can now review and confirm it in the NSS system.
             </p>
+            {checkoutUrl ? (
+              <p className="mt-3 text-sm text-gray-500 flex items-center justify-center gap-2">
+                <LinkIcon className="h-4 w-4" /> If you were not redirected,{' '}
+                <a className="text-orange-600 underline" href={checkoutUrl}>open your payment link</a>.
+              </p>
+            ) : null}
           </div>
         </DialogContent>
       </Dialog>
@@ -93,7 +195,7 @@ export const DonationModal = ({ open, onOpenChange }: DonationModalProps) => {
             <span>Support Our STEM Future</span>
           </DialogTitle>
           <DialogDescription>
-            Your contribution helps fund laboratories, equipment, and scholarships for deserving students.
+            Your contribution helps fund laboratories, equipment, scholarships, and future-ready learning for Nyagatare Secondary School students.
           </DialogDescription>
         </DialogHeader>
 
@@ -184,6 +286,58 @@ export const DonationModal = ({ open, onOpenChange }: DonationModalProps) => {
             </div>
           )}
 
+          <div className="grid gap-4 md:grid-cols-2">
+            <div>
+              <Label htmlFor="donorPhone">Phone Number</Label>
+              <Input
+                id="donorPhone"
+                placeholder="Enter your phone number"
+                value={donorPhone}
+                onChange={(e) => setDonorPhone(e.target.value)}
+                className="focus:ring-2 focus:ring-orange-500"
+              />
+            </div>
+            <div>
+              <Label htmlFor="paymentMethod">Payment Method</Label>
+              <Select value={paymentMethod} onValueChange={setPaymentMethod}>
+                <SelectTrigger className="focus:ring-2 focus:ring-orange-500">
+                  <SelectValue placeholder="Choose a method" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="flutterwave">Mobile Money / Card (Flutterwave)</SelectItem>
+                  <SelectItem value="bank_transfer">Bank Transfer (enter reference)</SelectItem>
+                  <SelectItem value="cash">Cash / Pledge</SelectItem>
+                  <SelectItem value="other">Other</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <div>
+            <Label htmlFor="paymentReference">Payment Reference</Label>
+            <Input
+              id="paymentReference"
+              placeholder="Transaction code, receipt number, or pledge reference"
+              value={paymentReference}
+              onChange={(e) => setPaymentReference(e.target.value)}
+              className="focus:ring-2 focus:ring-orange-500"
+            />
+          </div>
+
+          {paymentMethod === 'bank_transfer' ? (
+            <div>
+              <Label htmlFor="receiptUpload">Upload Receipt (optional, PDF/JPG/PNG)</Label>
+              <Input
+                id="receiptUpload"
+                type="file"
+                accept=".pdf,.png,.jpg,.jpeg"
+                onChange={(e) => setReceiptFile(e.target.files?.[0] || null)}
+                className="cursor-pointer"
+              />
+              <p className="text-xs text-gray-500 mt-1">If you already paid by bank transfer, attach the receipt to speed up confirmation.</p>
+            </div>
+          ) : null}
+
           {/* Message */}
           <div>
             <Label htmlFor="message">Message (Optional)</Label>
@@ -229,7 +383,7 @@ export const DonationModal = ({ open, onOpenChange }: DonationModalProps) => {
         </form>
 
         <div className="text-xs text-gray-500 text-center mt-4">
-          <p>Your donation is secure and helps support STEM education at Nyagatare Secondary School.</p>
+          <p>Your donation record is saved securely and reviewed through the NSS finance workflow.</p>
         </div>
       </DialogContent>
     </Dialog>

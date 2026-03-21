@@ -8,6 +8,8 @@ import { Card } from '../components/Card'
 
 export default function ProfilePage() {
   const { accessProfile, user, refreshAccessProfile, updateOwnAuthProfile } = useAuth()
+  const isStudent = accessProfile.role === 'Student'
+  const canEditName = !isStudent
   const [fullName, setFullName] = useState(accessProfile.fullName || accessProfile.displayName)
   const [department, setDepartment] = useState(accessProfile.department || '')
   const [currentPassword, setCurrentPassword] = useState('')
@@ -37,17 +39,21 @@ export default function ProfilePage() {
 
     try {
       await updateOwnAuthProfile({
-        displayName: fullName,
+        displayName: canEditName ? fullName : undefined,
         currentPassword,
         newPassword,
       })
 
       await updateAccessProfileRecord(user.uid, {
-        fullName: fullName.trim(),
-        displayName: fullName.trim(),
+        ...(canEditName
+          ? {
+              fullName: fullName.trim(),
+              displayName: fullName.trim(),
+            }
+          : {}),
         department: department.trim(),
         updated_at: new Date().toISOString(),
-      } as { fullName: string; displayName: string; department: string; updated_at: string })
+      } as { fullName?: string; displayName?: string; department: string; updated_at: string })
 
       await refreshAccessProfile()
 
@@ -78,9 +84,11 @@ export default function ProfilePage() {
               <Input
                 id="profile-name"
                 value={fullName}
+                disabled={!canEditName}
                 onChange={(event) => setFullName(event.target.value)}
-                className="border-slate-700 bg-slate-950 text-white placeholder:text-slate-400"
+                className="border-slate-700 bg-slate-950 text-white placeholder:text-slate-400 disabled:bg-slate-900/80 disabled:text-slate-300"
               />
+              {!canEditName ? <p className="text-xs text-slate-400">Student names are updated by staff rather than self-service.</p> : null}
             </div>
             <div className="space-y-2">
               <Label className="text-slate-200" htmlFor="profile-department">
@@ -188,7 +196,13 @@ export default function ProfilePage() {
           <div className="rounded-2xl border border-slate-800 bg-slate-900/70 p-4">
             <p className="font-medium text-white">Profile scope</p>
             <p className="mt-2">
-              Every user can update their own name, department, and password here. Role and sign-in email remain outside normal self-service.
+              Every user can update their own profile here, but what is editable adapts to the role. Role and sign-in email remain outside normal self-service.
+            </p>
+          </div>
+          <div className="rounded-2xl border border-slate-800 bg-slate-900/70 p-4">
+            <p className="font-medium text-white">Role-based editing</p>
+            <p className="mt-2">
+              Students can update password and personal session details here, but staff remain responsible for formal identity-name updates in school records.
             </p>
           </div>
           <div className="rounded-2xl border border-slate-800 bg-slate-900/70 p-4">

@@ -82,8 +82,12 @@ export interface Donation {
   currency: string
   donation_type: 'general' | 'scholarship' | 'equipment' | 'infrastructure' | 'other'
   payment_method?: string
-  payment_status: 'pending' | 'completed' | 'failed' | 'refunded'
+  payment_provider?: 'flutterwave' | 'bank_transfer' | 'cash' | 'other'
+  payment_link?: string
   payment_reference?: string
+  receipt_url?: string
+  receipt_path?: string
+  payment_status: 'pending' | 'completed' | 'failed' | 'refunded'
   message?: string
   is_anonymous: boolean
   created_at: string
