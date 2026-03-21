@@ -77,13 +77,13 @@ const Footer = ({ variant = 'default' }: { variant?: 'default' | 'system' }) => 
                 : 'Empowering the next generation of innovators and leaders through comprehensive STEM education and character development.'}
             </p>
             <div className="flex space-x-4">
-              <Button size="sm" variant="outline" className={actionButtonClasses}>
+              <Button size="sm" variant="outline" className={actionButtonClasses} aria-label="Visit Nyagatare Secondary School Facebook page">
                 <Facebook size={16} />
               </Button>
-              <Button size="sm" variant="outline" className={actionButtonClasses}>
+              <Button size="sm" variant="outline" className={actionButtonClasses} aria-label="Visit Nyagatare Secondary School X profile">
                 <Twitter size={16} />
               </Button>
-              <Button size="sm" variant="outline" className={actionButtonClasses}>
+              <Button size="sm" variant="outline" className={actionButtonClasses} aria-label="Visit Nyagatare Secondary School Instagram profile">
                 <Instagram size={16} />
               </Button>
             </div>
@@ -113,15 +113,21 @@ const Footer = ({ variant = 'default' }: { variant?: 'default' | 'system' }) => 
             <div className="space-y-3">
               <div className="flex items-center space-x-2">
                 <MapPin size={16} className={accentText} />
-                <span className={`${secondaryText} text-sm`}>Nyagatare District, Rwanda</span>
+                <a href="https://maps.google.com/?q=Nyagatare+District+Rwanda" className={`${secondaryText} text-sm hover:underline`}>
+                  Nyagatare District, Rwanda
+                </a>
               </div>
               <div className="flex items-center space-x-2">
                 <Phone size={16} className={accentText} />
-                <span className={`${secondaryText} text-sm`}>+250 785 972 954</span>
+                <a href="tel:+250785972954" className={`${secondaryText} text-sm hover:underline`}>
+                  +250 785 972 954
+                </a>
               </div>
               <div className="flex items-center space-x-2">
                 <Mail size={16} className={accentText} />
-                <span className={`${secondaryText} text-sm`}>nsheke@yahoo.com</span>
+                <a href="mailto:nsheke@yahoo.com" className={`${secondaryText} text-sm hover:underline`}>
+                  nsheke@yahoo.com
+                </a>
               </div>
             </div>
 
@@ -145,7 +151,7 @@ const Footer = ({ variant = 'default' }: { variant?: 'default' | 'system' }) => 
               </p>
             </div>
             <div className="w-full md:w-auto">
-              <div className="flex w-full space-x-2">
+              <div className="flex w-full flex-col gap-2 sm:flex-row">
               <Input
                 type="email"
                 placeholder="Enter your email"

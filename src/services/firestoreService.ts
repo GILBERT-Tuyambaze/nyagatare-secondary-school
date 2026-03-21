@@ -1,6 +1,5 @@
 import { addDoc, collection, deleteDoc, doc, getDoc, getDocs, onSnapshot, orderBy, query, setDoc, updateDoc, where } from 'firebase/firestore'
-import { getDownloadURL, ref, uploadBytes } from 'firebase/storage'
-import { db, storage } from '../firebase'
+import { db } from '../firebase'
 import {
   ActivityLog,
   Application,
@@ -8,6 +7,7 @@ import {
   ChatMessage,
   ChatThread,
   ClassTeacherAssignment,
+  ContentMediaItem,
   ContentPost,
   DisciplineCase,
   Donation,
@@ -49,8 +49,6 @@ const generateApplicationId = () => {
   return `APP-${year}-${stamp}`
 }
 
-const createSafeFileName = (name: string) => name.replace(/[^a-zA-Z0-9._-]+/g, '-').replace(/-+/g, '-').slice(0, 120)
-
 const applicationsCollection = collection(db, 'applications')
 const eventsCollection = collection(db, 'events')
 const donationsCollection = collection(db, 'donations')
@@ -68,7 +66,6 @@ const chatThreadsCollection = collection(db, 'chat_threads')
 const chatMessagesCollection = collection(db, 'chat_messages')
 const disciplineCasesCollection = collection(db, 'discipline_cases')
 const activityLogsCollection = collection(db, 'activity_logs')
-const donationReceiptsPath = 'donation_receipts'
 const classesCollection = collection(db, 'classes')
 const classStudentsCollection = collection(db, 'class_students')
 const classPostsCollection = collection(db, 'class_posts')
@@ -289,52 +286,6 @@ export const submitPublicApplication = async ({
 
   const ref = await addDoc(applicationsCollection, document)
   return withId(ref.id, document) as Application
-}
-
-export const uploadApplicantReport = async (file: File) => {
-  const extension = file.name.includes('.') ? file.name.slice(file.name.lastIndexOf('.')) : ''
-  const safeName = createSafeFileName(file.name.replace(extension, ''))
-  const objectPath = `application_reports/${Date.now()}-${createInviteToken()}-${safeName}${extension}`
-  const storageRef = ref(storage, objectPath)
-
-  await uploadBytes(storageRef, file, {
-    contentType: file.type || 'application/octet-stream',
-    customMetadata: {
-      uploadedFor: 'application-report',
-      originalName: file.name,
-    },
-  })
-
-  const downloadUrl = await getDownloadURL(storageRef)
-
-  return {
-    downloadUrl,
-    storagePath: objectPath,
-    fileName: file.name,
-  }
-}
-
-export const uploadDonationReceipt = async (file: File) => {
-  const extension = file.name.includes('.') ? file.name.slice(file.name.lastIndexOf('.')) : ''
-  const safeName = createSafeFileName(file.name.replace(extension, ''))
-  const objectPath = `${donationReceiptsPath}/${Date.now()}-${createInviteToken()}-${safeName}${extension}`
-  const storageRef = ref(storage, objectPath)
-
-  await uploadBytes(storageRef, file, {
-    contentType: file.type || 'application/octet-stream',
-    customMetadata: {
-      uploadedFor: 'donation-receipt',
-      originalName: file.name,
-    },
-  })
-
-  const downloadUrl = await getDownloadURL(storageRef)
-
-  return {
-    downloadUrl,
-    storagePath: objectPath,
-    fileName: file.name,
-  }
 }
 
 export const updateApplication = async (id: string, updates: Partial<Application>) => {

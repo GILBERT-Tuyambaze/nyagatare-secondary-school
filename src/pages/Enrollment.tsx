@@ -6,11 +6,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Progress } from '@/components/ui/progress'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { ArrowRight, CheckCircle, FileUp } from 'lucide-react'
+import { ArrowRight, CheckCircle, Link2 } from 'lucide-react'
 import Header from '@/components/Header'
 import Footer from '@/components/Footer'
 import Seo from '@/components/Seo'
-import { getApplicationsSettings, submitPublicApplication, subscribeApplicationsSettings, uploadApplicantReport } from '@/services/firestoreService'
+import { getApplicationsSettings, submitPublicApplication, subscribeApplicationsSettings } from '@/services/firestoreService'
 
 type ApplicationFormState = {
   first_name: string
@@ -90,9 +90,7 @@ export default function Enrollment() {
   const [currentStep, setCurrentStep] = useState(1)
   const [formState, setFormState] = useState<ApplicationFormState>(initialFormState)
   const [submitting, setSubmitting] = useState(false)
-  const [uploadingReport, setUploadingReport] = useState(false)
   const [error, setError] = useState('')
-  const [selectedReportFile, setSelectedReportFile] = useState<File | null>(null)
   const [applicationsOpen, setApplicationsOpen] = useState(true)
   const [applicationsUpdatedAt, setApplicationsUpdatedAt] = useState<string | null>(null)
   const [success, setSuccess] = useState<{
@@ -142,12 +140,6 @@ export default function Enrollment() {
     return false
   }, [currentStep, formState])
 
-  const handleReportFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0] || null
-    setSelectedReportFile(file)
-    setError('')
-  }
-
   const nextStep = () => {
     if (currentStep === 3) {
       try {
@@ -189,22 +181,13 @@ export default function Enrollment() {
     setError('')
 
     try {
-      let normalizedReportLink = normalizeOptionalUrl(formState.report_link)
-      let reportFileName = ''
-
-      if (selectedReportFile) {
-        setUploadingReport(true)
-        const uploadedReport = await uploadApplicantReport(selectedReportFile)
-        normalizedReportLink = uploadedReport.downloadUrl
-        reportFileName = uploadedReport.fileName
-      }
+      const normalizedReportLink = normalizeOptionalUrl(formState.report_link)
 
       const application = await submitPublicApplication({
         origin: window.location.origin,
         application: {
           ...formState,
           report_link: normalizedReportLink,
-          report_file_name: reportFileName || undefined,
           gender: formState.gender || 'other',
           status: 'pending',
           score: 0,
@@ -226,7 +209,6 @@ export default function Enrollment() {
     } catch (submitError) {
       setError(submitError instanceof Error ? submitError.message : 'Failed to submit application.')
     } finally {
-      setUploadingReport(false)
       setSubmitting(false)
     }
   }
@@ -301,6 +283,23 @@ export default function Enrollment() {
         title="Admissions Application | Nyagatare Secondary School"
         description="Apply to Nyagatare Secondary School through the online admissions form, submit applicant details, and begin your applicant portal access."
         path="/enroll"
+        keywords={[
+          'Nyagatare Secondary School admissions',
+          'apply to school in Rwanda',
+          'secondary school admissions Rwanda',
+          'Nyagatare District school admissions',
+          'Rwanda STEM school application',
+        ]}
+        structuredData={{
+          '@context': 'https://schema.org',
+          '@type': 'WebPage',
+          name: 'Nyagatare Secondary School Admissions',
+          url: 'https://www.nyagataress.edu.rw/enroll',
+          about: {
+            '@type': 'School',
+            name: 'Nyagatare Secondary School',
+          },
+        }}
       />
       <Header />
       <main id="main-content" className="min-h-screen bg-[linear-gradient(180deg,#f8fafc_0%,#fffdf7_100%)] pb-20 pt-32">
@@ -508,27 +507,21 @@ export default function Enrollment() {
                     <Label htmlFor="reportLink">Report Link</Label>
                     <Input id="reportLink" value={formState.report_link} onChange={(event) => updateField('report_link', event.target.value)} placeholder="Optional link to your school report or academic file" />
                     <p className="mt-1 text-xs text-gray-500">
-                      Paste a direct `http` or `https` link to a report card, Drive file, or other academic document.
+                      Paste a shareable `http` or `https` link to a report card, Google Drive file, OneDrive file, Dropbox file, or other academic document.
                     </p>
                   </div>
 
-                  <div>
-                    <Label htmlFor="reportUpload">Or Upload Report File</Label>
-                    <div className="mt-2 rounded-xl border border-dashed border-orange-300 bg-orange-50 p-4">
-                      <label htmlFor="reportUpload" className="flex cursor-pointer items-center gap-3 text-sm text-gray-700">
-                        <FileUp className="h-4 w-4 text-orange-600" />
-                        <span>{selectedReportFile ? selectedReportFile.name : 'Choose a PDF, image, or document file'}</span>
-                      </label>
-                      <Input
-                        id="reportUpload"
-                        type="file"
-                        accept=".pdf,.png,.jpg,.jpeg,.doc,.docx,.xls,.xlsx"
-                        onChange={handleReportFileChange}
-                        className="mt-3"
-                      />
-                      <p className="mt-2 text-xs text-gray-500">
-                        If you upload a file, it will be used instead of the pasted report link.
-                      </p>
+                  <div className="rounded-xl border border-orange-200 bg-orange-50 p-4">
+                    <div className="flex items-start gap-3">
+                      <div className="rounded-full bg-orange-100 p-2 text-orange-600">
+                        <Link2 className="h-4 w-4" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-gray-900">Use a shareable document link</p>
+                        <p className="mt-1 text-xs text-gray-600">
+                          Firebase Storage asks for billing, so this application form now works with report links only. Make sure the link can be opened by the admissions team.
+                        </p>
+                      </div>
                     </div>
                   </div>
 
@@ -568,9 +561,6 @@ export default function Enrollment() {
                   <div className="rounded-xl border bg-white p-4">
                     <p className="font-semibold text-gray-900">Motivation</p>
                     <p className="mt-2 text-sm text-gray-600">{formState.motivation}</p>
-                    {selectedReportFile ? (
-                      <p className="mt-3 text-sm text-gray-600">Selected upload: {selectedReportFile.name}</p>
-                    ) : null}
                     <div className="mt-3 text-sm text-gray-600">
                       <span className="font-medium text-gray-900">Report link:</span>{' '}
                       {safeReviewReportLink ? (
@@ -601,8 +591,8 @@ export default function Enrollment() {
                       Continue
                     </Button>
                   ) : (
-                    <Button className="bg-green-600 hover:bg-green-700" disabled={submitting || uploadingReport || !applicationsOpen} onClick={handleSubmit}>
-                      {uploadingReport ? 'Uploading Report...' : submitting ? 'Submitting...' : 'Submit Application'}
+                    <Button className="bg-green-600 hover:bg-green-700" disabled={submitting || !applicationsOpen} onClick={handleSubmit}>
+                      {submitting ? 'Submitting...' : 'Submit Application'}
                     </Button>
                   )}
                 </div>

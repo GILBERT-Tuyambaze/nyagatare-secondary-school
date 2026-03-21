@@ -90,7 +90,12 @@ const Header = ({ variant = 'default' }: { variant?: 'default' | 'system' }) => 
             <Link to="/" className="flex items-center space-x-3">
               {/* School Crest/Logo */}
               <div className="w-12 h-full flex items-center justify-center">
-                <img src="/images/nss-logo.jpg"/>
+                <img
+                  src="/images/nss-logo.jpg"
+                  alt="Nyagatare Secondary School logo"
+                  className="h-12 w-12 object-contain"
+                  decoding="async"
+                />
               </div>
               <div>
                 <div className={`text-xs uppercase tracking-wide ${brandAccentClasses}`}>{isSystem ? 'NSS DIGITAL SYSTEM' : 'NSS Rwanda'}</div>
@@ -161,6 +166,8 @@ const Header = ({ variant = 'default' }: { variant?: 'default' | 'system' }) => 
           <button
             className={mobileButtonClasses}
             onClick={() => setIsMenuOpen(!isMenuOpen)}
+            aria-expanded={isMenuOpen}
+            aria-label={isMenuOpen ? 'Close navigation menu' : 'Open navigation menu'}
           >
             {isMenuOpen ? <X size={24} /> : <Menu size={24} />}
           </button>

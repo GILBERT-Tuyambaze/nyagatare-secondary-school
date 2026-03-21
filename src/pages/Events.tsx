@@ -7,8 +7,30 @@ import { Link } from 'react-router-dom';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import Seo from '@/components/Seo';
+import ContentMediaCarousel from '@/components/ContentMediaCarousel';
 import { createNewsletterSubscriber, getEvents } from '@/services/firestoreService';
-import { Event } from '@/types/database';
+import { ContentMediaItem, Event } from '@/types/database';
+
+const getEventMedia = (event: Event): ContentMediaItem[] => {
+  if (event.media_gallery?.length) return event.media_gallery
+  if (!event.image_url) return []
+
+  return [
+    {
+      id: `${event.id}-featured`,
+      type: 'image',
+      source: 'link',
+      url: event.image_url,
+      preview_url: event.image_url,
+      title: event.title,
+    },
+  ]
+}
+
+const getEventCardImage = (event: Event) => {
+  const firstImage = getEventMedia(event).find((item) => item.type === 'image')
+  return firstImage?.preview_url || firstImage?.url || event.image_url || '/images/STEMFair.jpg'
+}
 
 const Events = () => {
   const [filter, setFilter] = useState('all');
@@ -16,9 +38,13 @@ const Events = () => {
   const [subscriberMessage, setSubscriberMessage] = useState('');
   const [subscribing, setSubscribing] = useState(false);
   const [events, setEvents] = useState<Event[]>([]);
+  const [activeEventId, setActiveEventId] = useState('');
 
   useEffect(() => {
-    getEvents().then(setEvents)
+    getEvents().then((entries) => {
+      setEvents(entries)
+      if (entries[0]) setActiveEventId(entries[0].id)
+    })
   }, [])
 
   const categories = [
@@ -34,6 +60,14 @@ const Events = () => {
     () => (filter === 'all' ? events : events.filter((event) => event.category === filter)),
     [events, filter]
   )
+
+  useEffect(() => {
+    if (!filteredEvents.find((event) => event.id === activeEventId) && filteredEvents[0]) {
+      setActiveEventId(filteredEvents[0].id)
+    }
+  }, [activeEventId, filteredEvents])
+
+  const activeEvent = filteredEvents.find((event) => event.id === activeEventId) || filteredEvents[0] || null
 
   const getCategoryColor = (category: string) => {
     const cat = categories.find(c => c.id === category);
@@ -75,6 +109,22 @@ const Events = () => {
         title="School Events | Nyagatare Secondary School"
         description="Explore academic events, ceremonies, parent meetings, sports, and cultural activities at Nyagatare Secondary School."
         path="/events"
+        keywords={[
+          'Nyagatare Secondary School events',
+          'school events in Rwanda',
+          'Nyagatare District school calendar',
+          'Rwanda secondary school events',
+        ]}
+        structuredData={{
+          '@context': 'https://schema.org',
+          '@type': 'CollectionPage',
+          name: 'Nyagatare Secondary School Events',
+          url: 'https://www.nyagataress.edu.rw/events',
+          about: {
+            '@type': 'School',
+            name: 'Nyagatare Secondary School',
+          },
+        }}
       />
       <Header />
       
@@ -113,14 +163,51 @@ const Events = () => {
             ))}
           </div>
 
+          {activeEvent ? (
+            <div className="mb-10 overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-sm">
+              {getEventMedia(activeEvent).length ? <ContentMediaCarousel items={getEventMedia(activeEvent)} title={activeEvent.title} /> : null}
+              <div className="p-6 md:p-8">
+                <div className="flex flex-wrap items-center gap-2">
+                  <Badge className={getCategoryColor(activeEvent.category)}>{activeEvent.category}</Badge>
+                  <Badge variant={activeEvent.status === 'upcoming' ? 'default' : 'secondary'}>
+                    {activeEvent.status}
+                  </Badge>
+                </div>
+                <h2 className="mt-4 text-3xl font-bold text-slate-900 md:text-4xl">{activeEvent.title}</h2>
+                <p className="mt-4 text-lg text-slate-600">{activeEvent.description || 'Event details from the NSS calendar.'}</p>
+                <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                  <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                    <div className="flex items-center text-sm font-medium text-slate-500"><Calendar className="mr-2 h-4 w-4" />Date</div>
+                    <p className="mt-2 text-sm text-slate-800">{formatDate(activeEvent.event_date)}</p>
+                  </div>
+                  <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                    <div className="flex items-center text-sm font-medium text-slate-500"><Clock className="mr-2 h-4 w-4" />Time</div>
+                    <p className="mt-2 text-sm text-slate-800">{[activeEvent.start_time, activeEvent.end_time].filter(Boolean).join(' - ') || 'Time to be confirmed'}</p>
+                  </div>
+                  <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                    <div className="flex items-center text-sm font-medium text-slate-500"><MapPin className="mr-2 h-4 w-4" />Location</div>
+                    <p className="mt-2 text-sm text-slate-800">{activeEvent.location || 'Campus venue to be confirmed'}</p>
+                  </div>
+                  <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                    <div className="flex items-center text-sm font-medium text-slate-500"><Users className="mr-2 h-4 w-4" />Attendance</div>
+                    <p className="mt-2 text-sm text-slate-800">{activeEvent.current_attendees} expected attendees</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : null}
+
           {/* Events Grid */}
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
             {filteredEvents.map((event) => (
-              <Card key={event.id} className="overflow-hidden border-slate-200 bg-white shadow-sm transition-all hover:-translate-y-1 hover:shadow-xl">
+              <Card
+                key={event.id}
+                className={`overflow-hidden border-slate-200 bg-white shadow-sm transition-all hover:-translate-y-1 hover:shadow-xl ${activeEvent?.id === event.id ? 'ring-2 ring-amber-500/70' : ''}`}
+              >
                 {/* Event Image */}
                 <div className="h-48 relative">
                   <img
-                    src={event.image_url || '/images/STEMFair.jpg'}
+                    src={getEventCardImage(event)}
                     alt={event.title}
                     className="w-full h-full object-cover"
                   />
@@ -170,8 +257,9 @@ const Events = () => {
                       className="w-full"
                       variant={event.status === 'upcoming' ? 'default' : 'outline'}
                       disabled={event.status === 'completed' || event.status === 'cancelled'}
+                      onClick={() => setActiveEventId(event.id)}
                     >
-                      {event.status === 'upcoming' ? 'Register Interest' : 'View Details'}
+                      {event.status === 'upcoming' ? 'Open Event' : 'View Details'}
                     </Button>
                   </div>
                 </CardContent>

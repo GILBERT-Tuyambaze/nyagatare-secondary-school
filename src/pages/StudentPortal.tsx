@@ -126,6 +126,7 @@ const StudentPortal: React.FC = () => {
         title="Applicant Portal | Nyagatare Secondary School"
         description="Track your application, review admissions decisions, and continue applicant onboarding through the Nyagatare Secondary School applicant portal."
         path="/applicant-portal"
+        robots="noindex,nofollow"
       />
       <Header />
       <main id="main-content" className="min-h-screen bg-[linear-gradient(180deg,#f8fafc_0%,#fffdf7_100%)] pb-20 pt-32">

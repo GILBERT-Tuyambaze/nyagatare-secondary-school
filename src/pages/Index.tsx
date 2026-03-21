@@ -16,6 +16,33 @@ export default function Index() {
         title="Nyagatare Secondary School | STEM, Academic Excellence, and Admissions in Rwanda"
         description="Nyagatare Secondary School is a Rwandan secondary school focused on academic excellence, STEM education, student discipline, digital school services, and applicant admissions support."
         path="/"
+        keywords={[
+          'Nyagatare Secondary School Rwanda',
+          'secondary school in Nyagatare District',
+          'best schools in Rwanda',
+          'Nyagatare school',
+          'Rwanda secondary school admissions',
+          'STEM school in Rwanda',
+          'schools in Nyagatare',
+          'nsheke school',
+          'musheke school',
+        ]}
+        structuredData={{
+          '@context': 'https://schema.org',
+          '@type': 'School',
+          name: 'Nyagatare Secondary School',
+          url: 'https://www.nyagataress.edu.rw/',
+          description:
+            'Nyagatare Secondary School is a secondary school in Rwanda serving Nyagatare District with strong academics, STEM education, admissions guidance, and digital school services.',
+          address: {
+            '@type': 'PostalAddress',
+            addressLocality: 'Nyagatare District',
+            addressRegion: 'Eastern Province',
+            addressCountry: 'RW',
+          },
+          areaServed: ['Nyagatare District', 'Rwanda'],
+          keywords: 'Nyagatare Secondary School, Rwanda secondary school, best schools in Rwanda, Nyagatare school',
+        }}
       />
       <Header />
       <main id="main-content" className="pt-20">

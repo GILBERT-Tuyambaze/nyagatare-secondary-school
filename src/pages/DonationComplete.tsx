@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useSearchParams, useNavigate } from 'react-router-dom'
 import { Card } from '@/loginpage/components/Card'
+import Seo from '@/components/Seo'
 
 export default function DonationCompletePage() {
   const search = useSearchParams()[0]
@@ -45,6 +46,12 @@ export default function DonationCompletePage() {
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-12">
+      <Seo
+        title="Donation Status | Nyagatare Secondary School"
+        description="Donation payment verification status for Nyagatare Secondary School."
+        path="/donation-complete"
+        robots="noindex,nofollow"
+      />
       <Card title="Donation Payment" description="Status of your recent donation">
         <div className="space-y-3">
           <p className="text-lg font-semibold">Status: {status}</p>

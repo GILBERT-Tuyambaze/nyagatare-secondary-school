@@ -71,6 +71,15 @@ service cloud.firestore {
       ]);
     }
 
+    function canManageAccessProfiles() {
+      return isSuperAdmin()
+        || isBootstrapAdmin()
+        || hasRole("Headmaster")
+        || hasRole("DOS")
+        || hasRole("HOD")
+        || hasRole("AdmissionsOfficer");
+    }
+
     function canInviteRole(targetRole) {
       return isBootstrapAdmin()
         || isSuperAdmin()
@@ -182,11 +191,11 @@ service cloud.firestore {
           )
         )
         || (
-          (isSuperAdmin() || isBootstrapAdmin())
+          canManageAccessProfiles()
           && !isProtectedAccessProfile()
         )
         || (
-          hasRole("Headmaster")
+          canManageAccessProfiles()
           && !isProtectedAccessProfile()
           && leadershipUserUpdateKeysAllowed()
           && request.resource.data.role == resource.data.role
@@ -196,7 +205,7 @@ service cloud.firestore {
           && request.resource.data.isProtected == resource.data.isProtected
         );
       allow delete: if !isProtectedAccessProfile()
-        && (isSuperAdmin() || isBootstrapAdmin() || hasRole("Headmaster"));
+        && canManageAccessProfiles();
     }
 
     match /students/{studentId} {

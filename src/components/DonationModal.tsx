@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Heart, CreditCard, Loader2, CheckCircle, Link as LinkIcon } from 'lucide-react';
 import { toast } from 'sonner';
-import { createDonation, uploadDonationReceipt } from '@/services/firestoreService';
+import { createDonation } from '@/services/firestoreService';
 import { Donation } from '@/types/database';
 
 interface DonationModalProps {
@@ -29,7 +29,7 @@ export const DonationModal = ({ open, onOpenChange }: DonationModalProps) => {
   const [isSuccess, setIsSuccess] = useState(false);
   const [savedDonationAmount, setSavedDonationAmount] = useState('');
   const [checkoutUrl, setCheckoutUrl] = useState('');
-  const [receiptFile, setReceiptFile] = useState<File | null>(null);
+  const [receiptLink, setReceiptLink] = useState('');
 
   const resetForm = () => {
     setAmount('');
@@ -42,7 +42,7 @@ export const DonationModal = ({ open, onOpenChange }: DonationModalProps) => {
     setMessage('');
     setIsAnonymous(false);
     setSavedDonationAmount('');
-    setReceiptFile(null);
+    setReceiptLink('');
     setCheckoutUrl('');
   };
 
@@ -101,19 +101,9 @@ export const DonationModal = ({ open, onOpenChange }: DonationModalProps) => {
         is_anonymous: isAnonymous,
       };
 
-      // upload receipt for bank transfer if provided
-      let receiptUrl: string | undefined
-      let receiptPath: string | undefined
-      if (paymentMethod === 'bank_transfer' && receiptFile) {
-        const uploaded = await uploadDonationReceipt(receiptFile)
-        receiptUrl = uploaded.downloadUrl
-        receiptPath = uploaded.storagePath
-      }
-
       const saved = await createDonation({
         ...donationBase,
-        receipt_url: receiptUrl,
-        receipt_path: receiptPath,
+        receipt_url: receiptLink.trim() || undefined,
       });
 
       if (paymentMethod === 'flutterwave') {
@@ -326,15 +316,15 @@ export const DonationModal = ({ open, onOpenChange }: DonationModalProps) => {
 
           {paymentMethod === 'bank_transfer' ? (
             <div>
-              <Label htmlFor="receiptUpload">Upload Receipt (optional, PDF/JPG/PNG)</Label>
+              <Label htmlFor="receiptLink">Receipt Link (optional)</Label>
               <Input
-                id="receiptUpload"
-                type="file"
-                accept=".pdf,.png,.jpg,.jpeg"
-                onChange={(e) => setReceiptFile(e.target.files?.[0] || null)}
-                className="cursor-pointer"
+                id="receiptLink"
+                placeholder="Paste a bank receipt link, Google Drive link, or shared document URL"
+                value={receiptLink}
+                onChange={(e) => setReceiptLink(e.target.value)}
+                className="focus:ring-2 focus:ring-orange-500"
               />
-              <p className="text-xs text-gray-500 mt-1">If you already paid by bank transfer, attach the receipt to speed up confirmation.</p>
+              <p className="text-xs text-gray-500 mt-1">If you already paid by bank transfer, paste a shareable receipt link to speed up confirmation.</p>
             </div>
           ) : null}
 

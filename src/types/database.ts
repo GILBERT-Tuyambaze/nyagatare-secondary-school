@@ -68,6 +68,7 @@ export interface Event {
   current_attendees: number
   status: 'upcoming' | 'ongoing' | 'completed' | 'cancelled'
   image_url?: string
+  media_gallery?: ContentMediaItem[]
   created_by?: string
   created_at: string
   updated_at: string
@@ -106,6 +107,18 @@ export interface NewsletterSubscriber {
   updated_at: string
 }
 
+export interface ContentMediaItem {
+  id: string
+  type: 'image' | 'video'
+  source: 'upload' | 'link' | 'google_drive'
+  url: string
+  preview_url?: string
+  title?: string
+  file_name?: string
+  mime_type?: string
+  storage_path?: string
+}
+
 export interface ContentPost {
   id: string
   title: string
@@ -115,6 +128,7 @@ export interface ContentPost {
   excerpt?: string
   body: string
   featured_image?: string
+  media_gallery?: ContentMediaItem[]
   author_name?: string
   published_at?: string
   created_at: string

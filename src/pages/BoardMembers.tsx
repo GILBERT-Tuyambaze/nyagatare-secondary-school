@@ -85,6 +85,22 @@ const BoardMembers: React.FC = () => {
         title="Governance and Board Members | Nyagatare Secondary School"
         description="Meet the leadership, teaching representatives, and parent board members who support governance at Nyagatare Secondary School."
         path="/board-members"
+        keywords={[
+          'Nyagatare Secondary School board members',
+          'Nyagatare school leadership',
+          'school governance Rwanda',
+          'secondary school board Rwanda',
+        ]}
+        structuredData={{
+          '@context': 'https://schema.org',
+          '@type': 'AboutPage',
+          name: 'Nyagatare Secondary School Governance and Board Members',
+          url: 'https://www.nyagataress.edu.rw/board-members',
+          about: {
+            '@type': 'School',
+            name: 'Nyagatare Secondary School',
+          },
+        }}
       />
       <Header />
       <main id="main-content" className="min-h-screen bg-[linear-gradient(180deg,#f8fafc_0%,#fffdf7_100%)] pb-20 pt-32">

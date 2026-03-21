@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import Seo from '@/components/Seo'
 import { Cpu, LockKeyhole, ShieldCheck, Sparkles } from 'lucide-react'
 
 const loginModes = [
@@ -69,6 +70,12 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(34,211,238,0.18),_transparent_35%),linear-gradient(160deg,_#020617_0%,_#111827_48%,_#0f172a_100%)] px-4 py-12 text-white">
+      <Seo
+        title="NSS Digital System Login | Nyagatare Secondary School"
+        description="Secure login for applicants, students, parents, and staff of Nyagatare Secondary School."
+        path="/login"
+        robots="noindex,nofollow"
+      />
       <div className="mx-auto grid min-h-[calc(100vh-6rem)] max-w-6xl items-center gap-8 lg:grid-cols-[1.1fr_0.9fr]">
         <div className="space-y-6">
           <div className="inline-flex items-center gap-2 rounded-full border border-cyan-400/20 bg-cyan-400/10 px-4 py-2 text-sm text-cyan-100">

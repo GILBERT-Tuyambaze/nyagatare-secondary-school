@@ -86,7 +86,7 @@ export function UserTable({
     !!selectedUser &&
     (selectedUser.id === viewerUid || selectedUser.email.toLowerCase() === normalizedViewerEmail)
 
-  const canManageUsers = viewerRole === 'SuperAdmin' || viewerRole === 'Headmaster'
+  const canManageUsers = ['SuperAdmin', 'Headmaster', 'DOS', 'HOD', 'AdmissionsOfficer'].includes(viewerRole)
   const canEditSelected = !!selectedUser && canManageUsers && !selectedUser.isProtected && !isSelectedSelf
   const canDeleteSelected = canEditSelected
   const canChangeRole = !!selectedUser && viewerRole === 'SuperAdmin' && !selectedUser.isProtected && !isSelectedSelf
@@ -166,7 +166,7 @@ export function UserTable({
     : selectedUser?.isProtected
       ? 'This protected ghost account can only be managed by itself through My Profile.'
       : canManageUsers
-        ? 'Headmaster and SuperAdmin can update non-protected user access here.'
+        ? 'Leadership managers can update or remove non-protected user access here.'
         : 'You can inspect user access here, but only leadership managers can edit or delete records.'
 
   return (
