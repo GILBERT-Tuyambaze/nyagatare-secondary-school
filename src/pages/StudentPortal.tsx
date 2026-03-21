@@ -153,6 +153,8 @@ const StudentPortal: React.FC = () => {
                   <Label htmlFor="applicationId">Application ID</Label>
                   <Input
                     id="applicationId"
+                    name="applicationId"
+                    autoComplete="off"
                     placeholder="e.g., APP-2026-123456"
                     value={applicationId}
                     onChange={(event) => setApplicationId(event.target.value)}

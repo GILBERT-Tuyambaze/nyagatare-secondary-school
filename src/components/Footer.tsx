@@ -152,8 +152,14 @@ const Footer = ({ variant = 'default' }: { variant?: 'default' | 'system' }) => 
             </div>
             <div className="w-full md:w-auto">
               <div className="flex w-full flex-col gap-2 sm:flex-row">
+              <label htmlFor="footer-newsletter-email" className="sr-only">
+                Email address for school newsletter updates
+              </label>
               <Input
+                id="footer-newsletter-email"
+                name="newsletterEmail"
                 type="email"
+                autoComplete="email"
                 placeholder="Enter your email"
                 className={inputClasses}
                 value={subscriberEmail}

@@ -144,7 +144,9 @@ export default function LoginPage() {
                       <Label htmlFor={`email-${mode.id}`}>Email</Label>
                       <Input
                         id={`email-${mode.id}`}
+                        name={`email-${mode.id}`}
                         type="email"
+                        autoComplete="email"
                         placeholder={mode.emailPlaceholder}
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
@@ -156,7 +158,9 @@ export default function LoginPage() {
                       <Label htmlFor={`password-${mode.id}`}>Password</Label>
                       <Input
                         id={`password-${mode.id}`}
+                        name={`password-${mode.id}`}
                         type="password"
+                        autoComplete="current-password"
                         placeholder="Enter your password"
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}

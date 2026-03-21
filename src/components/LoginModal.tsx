@@ -62,7 +62,9 @@ export const LoginModal: React.FC<LoginModalProps> = ({ open, onOpenChange }) =>
             <Label htmlFor="email">Email</Label>
             <Input
               id="email"
+              name="email"
               type="email"
+              autoComplete="email"
               placeholder="admin@nyagataress.edu.rw"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
@@ -75,7 +77,9 @@ export const LoginModal: React.FC<LoginModalProps> = ({ open, onOpenChange }) =>
             <div className="relative">
               <Input
                 id="password"
+                name="password"
                 type={showPassword ? 'text' : 'password'}
+                autoComplete="current-password"
                 placeholder="Enter your password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}

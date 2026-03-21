@@ -208,7 +208,9 @@ export const DonationModal = ({ open, onOpenChange }: DonationModalProps) => {
             </div>
             <Input
               id="amount"
+              name="amount"
               type="number"
+              autoComplete="off"
               placeholder="Enter custom amount"
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
@@ -222,7 +224,7 @@ export const DonationModal = ({ open, onOpenChange }: DonationModalProps) => {
           <div>
             <Label htmlFor="donationType">Donation Purpose *</Label>
             <Select value={donationType} onValueChange={setDonationType}>
-              <SelectTrigger className="focus:ring-2 focus:ring-orange-500">
+              <SelectTrigger id="donationType" className="focus:ring-2 focus:ring-orange-500">
                 <SelectValue placeholder="Select donation purpose" />
               </SelectTrigger>
               <SelectContent>
@@ -256,6 +258,8 @@ export const DonationModal = ({ open, onOpenChange }: DonationModalProps) => {
                 <Label htmlFor="donorName">Full Name *</Label>
                 <Input
                   id="donorName"
+                  name="donorName"
+                  autoComplete="name"
                   placeholder="Enter your full name"
                   value={donorName}
                   onChange={(e) => setDonorName(e.target.value)}
@@ -266,7 +270,9 @@ export const DonationModal = ({ open, onOpenChange }: DonationModalProps) => {
                 <Label htmlFor="donorEmail">Email Address *</Label>
                 <Input
                   id="donorEmail"
+                  name="donorEmail"
                   type="email"
+                  autoComplete="email"
                   placeholder="Enter your email"
                   value={donorEmail}
                   onChange={(e) => setDonorEmail(e.target.value)}
@@ -281,6 +287,8 @@ export const DonationModal = ({ open, onOpenChange }: DonationModalProps) => {
               <Label htmlFor="donorPhone">Phone Number</Label>
               <Input
                 id="donorPhone"
+                name="donorPhone"
+                autoComplete="tel"
                 placeholder="Enter your phone number"
                 value={donorPhone}
                 onChange={(e) => setDonorPhone(e.target.value)}
@@ -290,7 +298,7 @@ export const DonationModal = ({ open, onOpenChange }: DonationModalProps) => {
             <div>
               <Label htmlFor="paymentMethod">Payment Method</Label>
               <Select value={paymentMethod} onValueChange={setPaymentMethod}>
-                <SelectTrigger className="focus:ring-2 focus:ring-orange-500">
+                <SelectTrigger id="paymentMethod" className="focus:ring-2 focus:ring-orange-500">
                   <SelectValue placeholder="Choose a method" />
                 </SelectTrigger>
                 <SelectContent>
@@ -307,6 +315,8 @@ export const DonationModal = ({ open, onOpenChange }: DonationModalProps) => {
             <Label htmlFor="paymentReference">Payment Reference</Label>
             <Input
               id="paymentReference"
+              name="paymentReference"
+              autoComplete="off"
               placeholder="Transaction code, receipt number, or pledge reference"
               value={paymentReference}
               onChange={(e) => setPaymentReference(e.target.value)}
@@ -319,6 +329,8 @@ export const DonationModal = ({ open, onOpenChange }: DonationModalProps) => {
               <Label htmlFor="receiptLink">Receipt Link (optional)</Label>
               <Input
                 id="receiptLink"
+                name="receiptLink"
+                autoComplete="url"
                 placeholder="Paste a bank receipt link, Google Drive link, or shared document URL"
                 value={receiptLink}
                 onChange={(e) => setReceiptLink(e.target.value)}
@@ -333,6 +345,8 @@ export const DonationModal = ({ open, onOpenChange }: DonationModalProps) => {
             <Label htmlFor="message">Message (Optional)</Label>
             <Textarea
               id="message"
+              name="donationMessage"
+              autoComplete="off"
               placeholder="Leave a message of support..."
               value={message}
               onChange={(e) => setMessage(e.target.value)}

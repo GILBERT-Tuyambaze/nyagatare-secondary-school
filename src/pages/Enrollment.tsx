@@ -353,23 +353,23 @@ export default function Enrollment() {
                   <div className="grid gap-6 md:grid-cols-2">
                     <div>
                       <Label htmlFor="firstName">First Name *</Label>
-                      <Input id="firstName" value={formState.first_name} onChange={(event) => updateField('first_name', event.target.value)} placeholder="Enter your first name" />
+                      <Input id="firstName" name="firstName" autoComplete="given-name" value={formState.first_name} onChange={(event) => updateField('first_name', event.target.value)} placeholder="Enter your first name" />
                     </div>
                     <div>
                       <Label htmlFor="lastName">Last Name *</Label>
-                      <Input id="lastName" value={formState.last_name} onChange={(event) => updateField('last_name', event.target.value)} placeholder="Enter your last name" />
+                      <Input id="lastName" name="lastName" autoComplete="family-name" value={formState.last_name} onChange={(event) => updateField('last_name', event.target.value)} placeholder="Enter your last name" />
                     </div>
                   </div>
 
                   <div className="grid gap-6 md:grid-cols-2">
                     <div>
                       <Label htmlFor="dateOfBirth">Date of Birth *</Label>
-                      <Input id="dateOfBirth" type="date" value={formState.date_of_birth} onChange={(event) => updateField('date_of_birth', event.target.value)} />
+                      <Input id="dateOfBirth" name="dateOfBirth" type="date" autoComplete="bday" value={formState.date_of_birth} onChange={(event) => updateField('date_of_birth', event.target.value)} />
                     </div>
                     <div>
                       <Label htmlFor="gender">Gender *</Label>
                       <Select value={formState.gender} onValueChange={(value: 'male' | 'female' | 'other') => updateField('gender', value)}>
-                        <SelectTrigger>
+                        <SelectTrigger id="gender">
                           <SelectValue placeholder="Select gender" />
                         </SelectTrigger>
                         <SelectContent>
@@ -383,17 +383,17 @@ export default function Enrollment() {
 
                   <div>
                     <Label htmlFor="address">Home Address *</Label>
-                    <Textarea id="address" value={formState.address} onChange={(event) => updateField('address', event.target.value)} placeholder="Enter your full address" />
+                    <Textarea id="address" name="address" autoComplete="street-address" value={formState.address} onChange={(event) => updateField('address', event.target.value)} placeholder="Enter your full address" />
                   </div>
 
                   <div className="grid gap-6 md:grid-cols-2">
                     <div>
                       <Label htmlFor="phone">Phone Number</Label>
-                      <Input id="phone" value={formState.phone} onChange={(event) => updateField('phone', event.target.value)} placeholder="+250 XXX XXX XXX" />
+                      <Input id="phone" name="phone" autoComplete="tel" value={formState.phone} onChange={(event) => updateField('phone', event.target.value)} placeholder="+250 XXX XXX XXX" />
                     </div>
                     <div>
                       <Label htmlFor="email">Applicant Email *</Label>
-                      <Input id="email" type="email" value={formState.email} onChange={(event) => updateField('email', event.target.value)} placeholder="student@email.com" />
+                      <Input id="email" name="email" type="email" autoComplete="email" value={formState.email} onChange={(event) => updateField('email', event.target.value)} placeholder="student@email.com" />
                     </div>
                   </div>
                 </div>
@@ -404,12 +404,12 @@ export default function Enrollment() {
                   <div className="grid gap-6 md:grid-cols-2">
                     <div>
                       <Label htmlFor="guardianName">Guardian Full Name *</Label>
-                      <Input id="guardianName" value={formState.guardian_name} onChange={(event) => updateField('guardian_name', event.target.value)} placeholder="Enter guardian's full name" />
+                      <Input id="guardianName" name="guardianName" autoComplete="name" value={formState.guardian_name} onChange={(event) => updateField('guardian_name', event.target.value)} placeholder="Enter guardian's full name" />
                     </div>
                     <div>
                       <Label htmlFor="relationship">Relationship *</Label>
                       <Select value={formState.guardian_relationship} onValueChange={(value) => updateField('guardian_relationship', value)}>
-                        <SelectTrigger>
+                        <SelectTrigger id="relationship">
                           <SelectValue placeholder="Select relationship" />
                         </SelectTrigger>
                         <SelectContent>
@@ -424,32 +424,32 @@ export default function Enrollment() {
                   <div className="grid gap-6 md:grid-cols-2">
                     <div>
                       <Label htmlFor="guardianPhone">Guardian Phone *</Label>
-                      <Input id="guardianPhone" value={formState.guardian_phone} onChange={(event) => updateField('guardian_phone', event.target.value)} placeholder="+250 XXX XXX XXX" />
+                      <Input id="guardianPhone" name="guardianPhone" autoComplete="tel" value={formState.guardian_phone} onChange={(event) => updateField('guardian_phone', event.target.value)} placeholder="+250 XXX XXX XXX" />
                     </div>
                     <div>
                       <Label htmlFor="guardianEmail">Guardian Email</Label>
-                      <Input id="guardianEmail" type="email" value={formState.guardian_email} onChange={(event) => updateField('guardian_email', event.target.value)} placeholder="guardian@email.com" />
+                      <Input id="guardianEmail" name="guardianEmail" type="email" autoComplete="email" value={formState.guardian_email} onChange={(event) => updateField('guardian_email', event.target.value)} placeholder="guardian@email.com" />
                     </div>
                   </div>
 
                   <div>
                     <Label htmlFor="occupation">Guardian Occupation</Label>
-                    <Input id="occupation" value={formState.guardian_occupation} onChange={(event) => updateField('guardian_occupation', event.target.value)} placeholder="Enter occupation" />
+                    <Input id="occupation" name="guardianOccupation" autoComplete="organization-title" value={formState.guardian_occupation} onChange={(event) => updateField('guardian_occupation', event.target.value)} placeholder="Enter occupation" />
                   </div>
 
                   <div>
                     <Label htmlFor="emergencyContact">Emergency Contact *</Label>
-                    <Input id="emergencyContact" value={formState.emergency_contact} onChange={(event) => updateField('emergency_contact', event.target.value)} placeholder="Name and phone number" />
+                    <Input id="emergencyContact" name="emergencyContact" autoComplete="off" value={formState.emergency_contact} onChange={(event) => updateField('emergency_contact', event.target.value)} placeholder="Name and phone number" />
                   </div>
 
                   <div className="grid gap-6 md:grid-cols-2">
                     <div>
                       <Label htmlFor="urubutoId">Urubuto ID</Label>
-                      <Input id="urubutoId" value={formState.urubuto_id} onChange={(event) => updateField('urubuto_id', event.target.value)} placeholder="Optional Urubuto identifier" />
+                      <Input id="urubutoId" name="urubutoId" autoComplete="off" value={formState.urubuto_id} onChange={(event) => updateField('urubuto_id', event.target.value)} placeholder="Optional Urubuto identifier" />
                     </div>
                     <div>
                       <Label htmlFor="sdmsCode">SDMS Code</Label>
-                      <Input id="sdmsCode" value={formState.sdms_code} onChange={(event) => updateField('sdms_code', event.target.value)} placeholder="Optional SDMS code" />
+                      <Input id="sdmsCode" name="sdmsCode" autoComplete="off" value={formState.sdms_code} onChange={(event) => updateField('sdms_code', event.target.value)} placeholder="Optional SDMS code" />
                     </div>
                   </div>
                 </div>
@@ -459,14 +459,14 @@ export default function Enrollment() {
                 <div className="space-y-6">
                   <div>
                     <Label htmlFor="previousSchool">Previous School *</Label>
-                    <Input id="previousSchool" value={formState.previous_school} onChange={(event) => updateField('previous_school', event.target.value)} placeholder="Name of your previous school" />
+                    <Input id="previousSchool" name="previousSchool" autoComplete="organization" value={formState.previous_school} onChange={(event) => updateField('previous_school', event.target.value)} placeholder="Name of your previous school" />
                   </div>
 
                   <div className="grid gap-6 md:grid-cols-2">
                     <div>
                       <Label htmlFor="gradeLevel">Applying for Grade *</Label>
                       <Select value={formState.applying_grade} onValueChange={(value) => updateField('applying_grade', value)}>
-                        <SelectTrigger>
+                        <SelectTrigger id="gradeLevel">
                           <SelectValue placeholder="Select grade level" />
                         </SelectTrigger>
                         <SelectContent>
@@ -482,7 +482,7 @@ export default function Enrollment() {
                     <div>
                       <Label htmlFor="academicYear">Academic Year *</Label>
                       <Select value={formState.academic_year} onValueChange={(value) => updateField('academic_year', value)}>
-                        <SelectTrigger>
+                        <SelectTrigger id="academicYear">
                           <SelectValue placeholder="Select academic year" />
                         </SelectTrigger>
                         <SelectContent>
@@ -495,17 +495,17 @@ export default function Enrollment() {
 
                   <div>
                     <Label htmlFor="subjects">Preferred STEM Subjects</Label>
-                    <Textarea id="subjects" value={formState.preferred_subjects} onChange={(event) => updateField('preferred_subjects', event.target.value)} placeholder="List your preferred science, technology, engineering, or math subjects" />
+                    <Textarea id="subjects" name="preferredSubjects" autoComplete="off" value={formState.preferred_subjects} onChange={(event) => updateField('preferred_subjects', event.target.value)} placeholder="List your preferred science, technology, engineering, or math subjects" />
                   </div>
 
                   <div>
                     <Label htmlFor="achievements">Academic Achievements & Awards</Label>
-                    <Textarea id="achievements" value={formState.achievements} onChange={(event) => updateField('achievements', event.target.value)} placeholder="Describe academic achievements, awards, or recognitions" />
+                    <Textarea id="achievements" name="achievements" autoComplete="off" value={formState.achievements} onChange={(event) => updateField('achievements', event.target.value)} placeholder="Describe academic achievements, awards, or recognitions" />
                   </div>
 
                   <div>
                     <Label htmlFor="reportLink">Report Link</Label>
-                    <Input id="reportLink" value={formState.report_link} onChange={(event) => updateField('report_link', event.target.value)} placeholder="Optional link to your school report or academic file" />
+                    <Input id="reportLink" name="reportLink" autoComplete="url" value={formState.report_link} onChange={(event) => updateField('report_link', event.target.value)} placeholder="Optional link to your school report or academic file" />
                     <p className="mt-1 text-xs text-gray-500">
                       Paste a shareable `http` or `https` link to a report card, Google Drive file, OneDrive file, Dropbox file, or other academic document.
                     </p>
@@ -527,7 +527,7 @@ export default function Enrollment() {
 
                   <div>
                     <Label htmlFor="motivation">Why do you want to join NSS? *</Label>
-                    <Textarea id="motivation" value={formState.motivation} onChange={(event) => updateField('motivation', event.target.value)} placeholder="Tell us why you're interested in our school and programs" />
+                    <Textarea id="motivation" name="motivation" autoComplete="off" value={formState.motivation} onChange={(event) => updateField('motivation', event.target.value)} placeholder="Tell us why you're interested in our school and programs" />
                   </div>
                 </div>
               ) : null}

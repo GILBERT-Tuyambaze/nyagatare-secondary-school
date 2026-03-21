@@ -283,8 +283,14 @@ const Events = () => {
             </p>
             <div className="max-w-md mx-auto">
               <div className="flex flex-col gap-4 sm:flex-row">
+              <label htmlFor="events-newsletter-email" className="sr-only">
+                Email address for event updates
+              </label>
               <input
+                id="events-newsletter-email"
+                name="eventsNewsletterEmail"
                 type="email"
+                autoComplete="email"
                 placeholder="Enter your email address"
                 className="flex-1 rounded-lg border border-slate-300 px-4 py-2 focus:border-transparent focus:ring-2 focus:ring-amber-500"
                 value={subscriberEmail}

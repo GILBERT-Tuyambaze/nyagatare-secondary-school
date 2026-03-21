@@ -91,46 +91,48 @@ export default function Blog() {
   const renderCards = (entries: ContentPost[], label: string) => (
     <div className="grid gap-8 lg:grid-cols-2">
       {entries.map((post) => (
-        <button
+        <article
           key={post.id}
-          type="button"
-          onClick={() => openPost(post.id)}
           className={`overflow-hidden rounded-[2rem] border bg-white text-left shadow-sm transition-all hover:-translate-y-1 hover:shadow-xl ${activePost?.id === post.id ? 'border-amber-500 shadow-lg shadow-amber-100' : 'border-slate-200'}`}
         >
-          {getCardMedia(post) ? (
-            <div className="h-56">
-              <img src={getCardMedia(post)} alt={post.title} className="h-full w-full object-cover" />
-            </div>
-          ) : (
-            <div className={`flex h-56 items-center justify-center text-white ${label === 'Blog' ? 'bg-[linear-gradient(135deg,#0f172a_0%,#1d4ed8_100%)]' : 'bg-[linear-gradient(135deg,#f59e0b_0%,#f97316_100%)]'}`}>
-              <BookOpenText className="h-14 w-14" />
-            </div>
-          )}
-          <div className="p-6">
-            <div className="flex flex-wrap items-center gap-2">
-              <Badge className="bg-amber-100 text-amber-800 hover:bg-amber-100">{post.type}</Badge>
-              <div className="flex items-center text-sm text-slate-500">
-                <CalendarDays className="mr-1 h-4 w-4" />
-                {new Date(post.published_at || post.updated_at).toLocaleDateString()}
+          <button
+            type="button"
+            onClick={() => openPost(post.id)}
+            className="block w-full text-left"
+            aria-label={`Open ${post.type} article: ${post.title}`}
+          >
+            {getCardMedia(post) ? (
+              <div className="h-56">
+                <img src={getCardMedia(post)} alt={post.title} className="h-full w-full object-cover" />
               </div>
+            ) : (
+              <div className={`flex h-56 items-center justify-center text-white ${label === 'Blog' ? 'bg-[linear-gradient(135deg,#0f172a_0%,#1d4ed8_100%)]' : 'bg-[linear-gradient(135deg,#f59e0b_0%,#f97316_100%)]'}`}>
+                <BookOpenText className="h-14 w-14" />
+              </div>
+            )}
+            <div className="p-6">
+              <div className="flex flex-wrap items-center gap-2">
+                <Badge className="bg-amber-100 text-amber-800 hover:bg-amber-100">{post.type}</Badge>
+                <div className="flex items-center text-sm text-slate-500">
+                  <CalendarDays className="mr-1 h-4 w-4" />
+                  {new Date(post.published_at || post.updated_at).toLocaleDateString()}
+                </div>
+              </div>
+              <h3 className="mt-4 text-2xl font-bold text-slate-900">{post.title}</h3>
+              <p className="mt-3 text-slate-600">{post.excerpt || post.body.slice(0, 180)}</p>
             </div>
-            <h3 className="mt-4 text-2xl font-bold text-slate-900">{post.title}</h3>
-            <p className="mt-3 text-slate-600">{post.excerpt || post.body.slice(0, 180)}</p>
-            <div className="mt-5">
-              <Button
-                type="button"
-                variant="outline"
-                className="border-amber-300 text-amber-700 hover:bg-amber-50"
-                onClick={(event) => {
-                  event.stopPropagation()
-                  openPost(post.id)
-                }}
-              >
-                {label === 'News' ? 'Read this news' : label === 'Blog' ? 'Read this blog' : 'Open announcement'}
-              </Button>
-            </div>
+          </button>
+          <div className="px-6 pb-6">
+            <Button
+              type="button"
+              variant="outline"
+              className="border-amber-300 text-amber-700 hover:bg-amber-50"
+              onClick={() => openPost(post.id)}
+            >
+              {label === 'News' ? 'Read this news' : label === 'Blog' ? 'Read this blog' : 'Open announcement'}
+            </Button>
           </div>
-        </button>
+        </article>
       ))}
     </div>
   )
@@ -178,6 +180,9 @@ export default function Blog() {
 
           <div className="mb-8 flex flex-col gap-3 rounded-[2rem] border border-slate-200 bg-white p-5 shadow-sm md:flex-row md:items-center md:justify-between">
             <Input
+              id="blog-search"
+              name="blogSearch"
+              autoComplete="off"
               value={search}
               onChange={(event) => setSearch(event.target.value)}
               placeholder="Search school stories, blog posts, or announcements"
