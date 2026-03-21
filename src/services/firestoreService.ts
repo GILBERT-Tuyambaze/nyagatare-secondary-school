@@ -1,6 +1,6 @@
 import { addDoc, collection, deleteDoc, doc, getDoc, getDocs, onSnapshot, orderBy, query, setDoc, updateDoc, where } from 'firebase/firestore'
 import { getDownloadURL, ref, uploadBytes } from 'firebase/storage'
-import { db, storage } from '@/firebase'
+import { db, storage } from '../firebase'
 import {
   ActivityLog,
   Application,
@@ -18,9 +18,9 @@ import {
   SchoolSubject,
   Student,
   StudentMark,
-} from '@/types/database'
-import { ClassPost, Classroom, ClassStudent, Invite, Role, SystemUser } from '@/loginpage/types'
-import { rolePermissions } from '@/loginpage/lib/rbac'
+} from '../types/database'
+import { ClassPost, Classroom, ClassStudent, Invite, Role, SystemUser } from '../loginpage/types'
+import { rolePermissions } from '../loginpage/lib/rbac'
 
 type FirestoreEntity = {
   id: string
