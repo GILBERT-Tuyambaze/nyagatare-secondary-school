@@ -182,7 +182,7 @@ export default function HighTechSystem() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                <Link to="/student-portal" className="block rounded-2xl border border-white/10 bg-slate-950/40 p-4 transition-colors hover:border-cyan-300/30">
+                <Link to="/applicant-portal" className="block rounded-2xl border border-white/10 bg-slate-950/40 p-4 transition-colors hover:border-cyan-300/30">
                   <p className="font-medium text-white">Track Student Applications</p>
                   <p className="mt-1 text-sm text-slate-300">Open the student-facing tracker.</p>
                 </Link>

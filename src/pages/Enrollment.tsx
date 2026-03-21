@@ -6,10 +6,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Progress } from '@/components/ui/progress'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { ArrowRight, CheckCircle } from 'lucide-react'
+import { ArrowRight, CheckCircle, FileUp } from 'lucide-react'
 import Header from '@/components/Header'
 import Footer from '@/components/Footer'
-import { createApplicantInvite, createApplication, getApplicationsSettings, updateApplication } from '@/services/firestoreService'
+import Seo from '@/components/Seo'
+import { getApplicationsSettings, submitPublicApplication, subscribeApplicationsSettings, uploadApplicantReport } from '@/services/firestoreService'
 
 type ApplicationFormState = {
   first_name: string
@@ -25,6 +26,9 @@ type ApplicationFormState = {
   guardian_email: string
   guardian_occupation: string
   emergency_contact: string
+  urubuto_id: string
+  sdms_code: string
+  report_link: string
   previous_school: string
   applying_grade: string
   academic_year: string
@@ -47,6 +51,9 @@ const initialFormState: ApplicationFormState = {
   guardian_email: '',
   guardian_occupation: '',
   emergency_contact: '',
+  urubuto_id: '',
+  sdms_code: '',
+  report_link: '',
   previous_school: '',
   applying_grade: '',
   academic_year: '2026',
@@ -57,26 +64,69 @@ const initialFormState: ApplicationFormState = {
 
 const steps = ['Personal Information', 'Guardian Information', 'Academic Background', 'Review & Submit']
 
+const normalizeOptionalUrl = (value: string) => {
+  const trimmed = value.trim()
+  if (!trimmed) return ''
+
+  const candidates = trimmed.startsWith('http://') || trimmed.startsWith('https://')
+    ? [trimmed]
+    : [`https://${trimmed}`, trimmed]
+
+  for (const candidate of candidates) {
+    try {
+      const parsed = new URL(candidate)
+      if (parsed.protocol === 'http:' || parsed.protocol === 'https:') {
+        return parsed.toString()
+      }
+    } catch (error) {
+      continue
+    }
+  }
+
+  throw new Error('Report link must be a valid http or https URL.')
+}
+
 export default function Enrollment() {
   const [currentStep, setCurrentStep] = useState(1)
   const [formState, setFormState] = useState<ApplicationFormState>(initialFormState)
   const [submitting, setSubmitting] = useState(false)
+  const [uploadingReport, setUploadingReport] = useState(false)
   const [error, setError] = useState('')
+  const [selectedReportFile, setSelectedReportFile] = useState<File | null>(null)
   const [applicationsOpen, setApplicationsOpen] = useState(true)
+  const [applicationsUpdatedAt, setApplicationsUpdatedAt] = useState<string | null>(null)
   const [success, setSuccess] = useState<{
     applicationId: string
     signupUrl?: string
+    decisionUrl: string
   } | null>(null)
 
   const totalSteps = steps.length
   const progress = (currentStep / totalSteps) * 100
+  const safeReviewReportLink = (() => {
+    try {
+      return normalizeOptionalUrl(formState.report_link)
+    } catch (error) {
+      return ''
+    }
+  })()
 
   const updateField = <K extends keyof ApplicationFormState>(field: K, value: ApplicationFormState[K]) => {
     setFormState((current) => ({ ...current, [field]: value }))
   }
 
   useEffect(() => {
-    getApplicationsSettings().then((settings) => setApplicationsOpen(settings.isOpen))
+    getApplicationsSettings().then((settings) => {
+      setApplicationsOpen(settings.isOpen)
+      setApplicationsUpdatedAt(settings.updated_at)
+    })
+
+    const unsubscribe = subscribeApplicationsSettings((settings) => {
+      setApplicationsOpen(settings.isOpen)
+      setApplicationsUpdatedAt(settings.updated_at)
+    })
+
+    return unsubscribe
   }, [])
 
   const stepErrors = useMemo(() => {
@@ -92,7 +142,25 @@ export default function Enrollment() {
     return false
   }, [currentStep, formState])
 
+  const handleReportFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0] || null
+    setSelectedReportFile(file)
+    setError('')
+  }
+
   const nextStep = () => {
+    if (currentStep === 3) {
+      try {
+        const normalizedReportLink = normalizeOptionalUrl(formState.report_link)
+        if (normalizedReportLink !== formState.report_link) {
+          updateField('report_link', normalizedReportLink)
+        }
+      } catch (validationError) {
+        setError(validationError instanceof Error ? validationError.message : 'Please provide a valid report link.')
+        return
+      }
+    }
+
     if (currentStep < totalSteps && !stepErrors) {
       setCurrentStep((current) => current + 1)
       setError('')
@@ -121,46 +189,44 @@ export default function Enrollment() {
     setError('')
 
     try {
-      const application = await createApplication({
-        ...formState,
-        gender: formState.gender || 'other',
-        status: 'pending',
-        score: 0,
-        admin_notes: '',
-      })
+      let normalizedReportLink = normalizeOptionalUrl(formState.report_link)
+      let reportFileName = ''
 
-      let applicantInviteUrl = ''
-      let applicantInviteId = ''
-
-      if (formState.email.trim()) {
-        const invite = await createApplicantInvite({
-          applicationId: application.application_id,
-          email: formState.email.trim().toLowerCase(),
-          origin: window.location.origin,
-        })
-
-        applicantInviteUrl = invite.signupUrl || ''
-        applicantInviteId = invite.id
-
-        await updateApplication(application.id, {
-          applicant_invite_id: applicantInviteId,
-          applicant_signup_url: applicantInviteUrl,
-        })
+      if (selectedReportFile) {
+        setUploadingReport(true)
+        const uploadedReport = await uploadApplicantReport(selectedReportFile)
+        normalizedReportLink = uploadedReport.downloadUrl
+        reportFileName = uploadedReport.fileName
       }
+
+      const application = await submitPublicApplication({
+        origin: window.location.origin,
+        application: {
+          ...formState,
+          report_link: normalizedReportLink,
+          report_file_name: reportFileName || undefined,
+          gender: formState.gender || 'other',
+          status: 'pending',
+          score: 0,
+          admin_notes: '',
+        },
+      })
 
       setSuccess({
         applicationId: application.application_id,
-        signupUrl: applicantInviteUrl,
+        signupUrl: application.applicant_signup_url,
+        decisionUrl: `${window.location.origin}/applicant-portal?applicationId=${encodeURIComponent(application.application_id)}`,
       })
 
-      if (applicantInviteUrl) {
+      if (application.applicant_signup_url) {
         setTimeout(() => {
-          window.location.assign(applicantInviteUrl)
+          window.location.assign(application.applicant_signup_url as string)
         }, 3000)
       }
     } catch (submitError) {
       setError(submitError instanceof Error ? submitError.message : 'Failed to submit application.')
     } finally {
+      setUploadingReport(false)
       setSubmitting(false)
     }
   }
@@ -168,10 +234,15 @@ export default function Enrollment() {
   if (success) {
     return (
       <>
+        <Seo
+          title="Application Submitted | Nyagatare Secondary School Admissions"
+          description="Your Nyagatare Secondary School application has been submitted. Review your application ID, applicant portal, and account creation next steps."
+          path="/enroll"
+        />
         <Header />
-        <div className="min-h-screen bg-gray-50 py-20">
+        <main id="main-content" className="min-h-screen bg-[linear-gradient(180deg,#f8fafc_0%,#fffdf7_100%)] pb-20 pt-32">
           <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
-            <Card>
+            <Card className="border-slate-200 shadow-sm">
               <CardHeader>
                 <CardTitle className="flex items-center gap-3 text-2xl">
                   <CheckCircle className="h-6 w-6 text-emerald-500" />
@@ -182,10 +253,23 @@ export default function Enrollment() {
                 <p className="text-gray-700">
                   Your application has been saved. Your application ID is <span className="font-semibold">{success.applicationId}</span>.
                 </p>
+                <p className="text-gray-700">
+                  You can also review your application any time through the decision portal using your saved application ID.
+                </p>
+                <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                  <p className="text-sm font-medium text-slate-900">Applicant decision portal</p>
+                  <p className="mt-2 break-all text-sm text-slate-700">{success.decisionUrl}</p>
+                </div>
+                <Button variant="outline" asChild>
+                  <a href={success.decisionUrl}>
+                    Open Decision Portal
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </a>
+                </Button>
                 {success.signupUrl ? (
                   <>
                     <p className="text-gray-700">
-                      You can now create your applicant account using the link below. You will be redirected automatically in a few seconds.
+                      You can now create your applicant account using the one-time secure link below. You will be redirected automatically in a few seconds.
                     </p>
                     <div className="rounded-xl border border-orange-200 bg-orange-50 p-4">
                       <p className="break-all text-sm text-gray-700">{success.signupUrl}</p>
@@ -205,7 +289,7 @@ export default function Enrollment() {
               </CardContent>
             </Card>
           </div>
-        </div>
+        </main>
         <Footer />
       </>
     )
@@ -213,8 +297,13 @@ export default function Enrollment() {
 
   return (
     <>
+      <Seo
+        title="Admissions Application | Nyagatare Secondary School"
+        description="Apply to Nyagatare Secondary School through the online admissions form, submit applicant details, and begin your applicant portal access."
+        path="/enroll"
+      />
       <Header />
-      <div className="min-h-screen bg-gray-50 py-12">
+      <main id="main-content" className="min-h-screen bg-[linear-gradient(180deg,#f8fafc_0%,#fffdf7_100%)] pb-20 pt-32">
         <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
           {!applicationsOpen ? (
             <Card className="mb-8 border-orange-200 bg-orange-50">
@@ -223,16 +312,20 @@ export default function Enrollment() {
                 <p className="mt-2 text-sm text-gray-700">
                   Admissions intake has been paused by school leadership. Please check back later or contact the admissions office.
                 </p>
+                {applicationsUpdatedAt ? (
+                  <p className="mt-2 text-xs text-gray-500">Last updated {new Date(applicationsUpdatedAt).toLocaleString()}</p>
+                ) : null}
               </CardContent>
             </Card>
           ) : null}
 
-          <div className="mb-8 text-center">
-            <h1 className="mb-4 text-4xl font-bold text-gray-900">Student Enrollment Application</h1>
-            <p className="text-xl text-gray-600">Join Nyagatare Secondary School and start your admissions journey.</p>
+          <div className="mb-8 rounded-[2rem] border border-slate-200 bg-white/90 px-6 py-10 text-center shadow-sm sm:px-10">
+            <p className="text-sm font-semibold uppercase tracking-[0.3em] text-amber-700">Admissions</p>
+            <h1 className="mb-4 mt-4 text-4xl font-bold text-slate-900 md:text-5xl">Student Enrollment Application</h1>
+            <p className="mx-auto max-w-3xl text-lg text-slate-600 md:text-xl">Join Nyagatare Secondary School and start your admissions journey through a secure digital application process.</p>
           </div>
 
-          <Card className="mb-8">
+          <Card className="mb-8 border-slate-200 shadow-sm">
             <CardContent className="p-6">
               <div className="mb-4 flex justify-between">
                 <span className="text-sm font-medium text-gray-600">Step {currentStep} of {totalSteps}</span>
@@ -249,7 +342,7 @@ export default function Enrollment() {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="border-slate-200 shadow-sm">
             <CardHeader>
               <CardTitle>{steps[currentStep - 1]}</CardTitle>
             </CardHeader>
@@ -349,6 +442,17 @@ export default function Enrollment() {
                     <Label htmlFor="emergencyContact">Emergency Contact *</Label>
                     <Input id="emergencyContact" value={formState.emergency_contact} onChange={(event) => updateField('emergency_contact', event.target.value)} placeholder="Name and phone number" />
                   </div>
+
+                  <div className="grid gap-6 md:grid-cols-2">
+                    <div>
+                      <Label htmlFor="urubutoId">Urubuto ID</Label>
+                      <Input id="urubutoId" value={formState.urubuto_id} onChange={(event) => updateField('urubuto_id', event.target.value)} placeholder="Optional Urubuto identifier" />
+                    </div>
+                    <div>
+                      <Label htmlFor="sdmsCode">SDMS Code</Label>
+                      <Input id="sdmsCode" value={formState.sdms_code} onChange={(event) => updateField('sdms_code', event.target.value)} placeholder="Optional SDMS code" />
+                    </div>
+                  </div>
                 </div>
               ) : null}
 
@@ -401,6 +505,34 @@ export default function Enrollment() {
                   </div>
 
                   <div>
+                    <Label htmlFor="reportLink">Report Link</Label>
+                    <Input id="reportLink" value={formState.report_link} onChange={(event) => updateField('report_link', event.target.value)} placeholder="Optional link to your school report or academic file" />
+                    <p className="mt-1 text-xs text-gray-500">
+                      Paste a direct `http` or `https` link to a report card, Drive file, or other academic document.
+                    </p>
+                  </div>
+
+                  <div>
+                    <Label htmlFor="reportUpload">Or Upload Report File</Label>
+                    <div className="mt-2 rounded-xl border border-dashed border-orange-300 bg-orange-50 p-4">
+                      <label htmlFor="reportUpload" className="flex cursor-pointer items-center gap-3 text-sm text-gray-700">
+                        <FileUp className="h-4 w-4 text-orange-600" />
+                        <span>{selectedReportFile ? selectedReportFile.name : 'Choose a PDF, image, or document file'}</span>
+                      </label>
+                      <Input
+                        id="reportUpload"
+                        type="file"
+                        accept=".pdf,.png,.jpg,.jpeg,.doc,.docx,.xls,.xlsx"
+                        onChange={handleReportFileChange}
+                        className="mt-3"
+                      />
+                      <p className="mt-2 text-xs text-gray-500">
+                        If you upload a file, it will be used instead of the pasted report link.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div>
                     <Label htmlFor="motivation">Why do you want to join NSS? *</Label>
                     <Textarea id="motivation" value={formState.motivation} onChange={(event) => updateField('motivation', event.target.value)} placeholder="Tell us why you're interested in our school and programs" />
                   </div>
@@ -428,12 +560,32 @@ export default function Enrollment() {
                       <p className="mt-2 text-sm text-gray-600">{formState.applying_grade}</p>
                       <p className="text-sm text-gray-600">Academic year {formState.academic_year}</p>
                       <p className="text-sm text-gray-600">Previous school: {formState.previous_school}</p>
+                      <p className="text-sm text-gray-600">Urubuto ID: {formState.urubuto_id || 'Not provided'}</p>
+                      <p className="text-sm text-gray-600">SDMS code: {formState.sdms_code || 'Not provided'}</p>
                     </div>
                   </div>
 
                   <div className="rounded-xl border bg-white p-4">
                     <p className="font-semibold text-gray-900">Motivation</p>
                     <p className="mt-2 text-sm text-gray-600">{formState.motivation}</p>
+                    {selectedReportFile ? (
+                      <p className="mt-3 text-sm text-gray-600">Selected upload: {selectedReportFile.name}</p>
+                    ) : null}
+                    <div className="mt-3 text-sm text-gray-600">
+                      <span className="font-medium text-gray-900">Report link:</span>{' '}
+                      {safeReviewReportLink ? (
+                        <a
+                          href={safeReviewReportLink}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-orange-600 underline underline-offset-2 hover:text-orange-700"
+                        >
+                          Open submitted report
+                        </a>
+                      ) : (
+                        'Not provided'
+                      )}
+                    </div>
                   </div>
                 </div>
               ) : null}
@@ -445,12 +597,12 @@ export default function Enrollment() {
 
                 <div className="space-x-4">
                   {currentStep < totalSteps ? (
-                    <Button onClick={nextStep} className="bg-orange-500 hover:bg-orange-600" disabled={submitting}>
+                    <Button onClick={nextStep} className="bg-orange-500 hover:bg-orange-600" disabled={submitting || !applicationsOpen}>
                       Continue
                     </Button>
                   ) : (
-                    <Button className="bg-green-600 hover:bg-green-700" disabled={submitting} onClick={handleSubmit}>
-                      {submitting ? 'Submitting...' : 'Submit Application'}
+                    <Button className="bg-green-600 hover:bg-green-700" disabled={submitting || uploadingReport || !applicationsOpen} onClick={handleSubmit}>
+                      {uploadingReport ? 'Uploading Report...' : submitting ? 'Submitting...' : 'Submit Application'}
                     </Button>
                   )}
                 </div>
@@ -462,7 +614,7 @@ export default function Enrollment() {
             Need help? Contact our admissions office at +250 788 123 456 or admissions@nyagataress.edu.rw
           </div>
         </div>
-      </div>
+      </main>
       <Footer />
     </>
   )

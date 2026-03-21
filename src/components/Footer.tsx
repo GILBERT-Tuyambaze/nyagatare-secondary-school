@@ -3,10 +3,12 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Facebook, Twitter, Instagram, Mail, Phone, MapPin, LogIn } from 'lucide-react'
 import { Link } from 'react-router-dom'
-import { LoginModal } from './LoginModal'
+import { createNewsletterSubscriber } from '@/services/firestoreService'
 
 const Footer = ({ variant = 'default' }: { variant?: 'default' | 'system' }) => {
-  const [isLoginOpen, setIsLoginOpen] = useState(false)
+  const [subscriberEmail, setSubscriberEmail] = useState('')
+  const [subscriberMessage, setSubscriberMessage] = useState('')
+  const [subscribing, setSubscribing] = useState(false)
   const isSystem = variant === 'system'
   const wrapperClasses = isSystem ? 'border-t border-slate-800 bg-slate-950 text-white' : 'bg-gray-900 text-white'
   const secondaryText = isSystem ? 'text-slate-300' : 'text-gray-300'
@@ -27,14 +29,33 @@ const Footer = ({ variant = 'default' }: { variant?: 'default' | 'system' }) => 
         { label: 'Invite Signup', href: '/system/invite', type: 'route' },
         { label: 'Main Website', href: '/', type: 'route' },
       ]
-    : [
+      : [
         { label: 'About Us', href: '/#about', type: 'anchor' },
         { label: 'Academics', href: '/#academics', type: 'anchor' },
         { label: 'Enrollment', href: '/enroll', type: 'route' },
         { label: 'Events', href: '/events', type: 'route' },
         { label: 'Board Members', href: '/board-members', type: 'route' },
-        { label: 'Student Portal', href: '/student-portal', type: 'route' },
+        { label: 'Applicant Portal', href: '/applicant-portal', type: 'route' },
       ]
+
+  const handleSubscribe = async () => {
+    setSubscribing(true)
+    setSubscriberMessage('')
+
+    try {
+      const result = await createNewsletterSubscriber({ email: subscriberEmail, source: 'footer' })
+      setSubscriberMessage(
+        result.duplicate
+          ? 'This email is already subscribed. We refreshed your Homepage Footer updates.'
+          : 'You are now subscribed to NSS updates from the Homepage Footer.'
+      )
+      setSubscriberEmail('')
+    } catch (error) {
+      setSubscriberMessage(error instanceof Error ? error.message : 'Failed to subscribe right now.')
+    } finally {
+      setSubscribing(false)
+    }
+  }
 
   return (
     <footer id="contact" className={wrapperClasses}>
@@ -105,14 +126,11 @@ const Footer = ({ variant = 'default' }: { variant?: 'default' | 'system' }) => 
             </div>
 
             <div className="mt-6">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setIsLoginOpen(true)}
-                className={actionButtonClasses}
-              >
-                <LogIn size={16} className="mr-2" />
-                {isSystem ? 'Open Login' : 'Admin Login'}
+              <Button variant="outline" size="sm" className={actionButtonClasses} asChild>
+                <Link to="/login">
+                  <LogIn size={16} className="mr-2" />
+                  Open NSS Digital System
+                </Link>
               </Button>
             </div>
           </div>
@@ -126,14 +144,20 @@ const Footer = ({ variant = 'default' }: { variant?: 'default' | 'system' }) => 
                 {isSystem ? 'Stay aligned with secure school operations and platform updates.' : 'Subscribe to our newsletter for the latest news and events.'}
               </p>
             </div>
-            <div className="flex space-x-2 w-full md:w-auto">
+            <div className="w-full md:w-auto">
+              <div className="flex w-full space-x-2">
               <Input
+                type="email"
                 placeholder="Enter your email"
                 className={inputClasses}
+                value={subscriberEmail}
+                onChange={(event) => setSubscriberEmail(event.target.value)}
               />
-              <Button className={subscribeButtonClasses}>
-                Subscribe
+              <Button className={subscribeButtonClasses} onClick={handleSubscribe} disabled={subscribing}>
+                {subscribing ? 'Subscribing...' : 'Subscribe for Updates'}
               </Button>
+              </div>
+              {subscriberMessage ? <p className={`mt-2 text-sm ${mutedText}`}>{subscriberMessage}</p> : null}
             </div>
           </div>
         </div>
@@ -150,7 +174,6 @@ const Footer = ({ variant = 'default' }: { variant?: 'default' | 'system' }) => 
         </div>
       </div>
 
-      <LoginModal open={isLoginOpen} onOpenChange={setIsLoginOpen} />
     </footer>
   )
 }

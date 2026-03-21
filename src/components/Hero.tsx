@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Link } from 'react-router-dom';
 
 const Hero = () => {
   const [currentSlide, setCurrentSlide] = useState(0);
@@ -9,33 +10,33 @@ const Hero = () => {
     {
       id: 1,
       title: "NYAGATARE SECONDARY SCHOOL",
-      subtitle: "Excellence in STEM Education",
-      description: "We Are A Public School That Welcomes Any Student Interested In Exploring The Fields Of Science, Technology, Engineering And Math.",
-      gradient: "from-blue-600 via-purple-600 to-orange-500",
+      subtitle: "Academic Excellence, Discipline, and STEM Leadership",
+      description: "A Rwandan secondary school committed to strong academics, laboratory-based learning, digital readiness, and principled student development.",
+      gradient: "from-slate-900 via-blue-900 to-amber-700",
       textColor: "text-white"
     },
     {
       id: 2,
-      title: "ADVANCED LABORATORIES",
-      subtitle: "State-of-the-Art Facilities",
-      description: "Experience hands-on learning in our modern science laboratories equipped with cutting-edge technology and equipment.",
-      gradient: "from-green-500 via-teal-500 to-blue-600",
+      title: "SCIENCE AND INNOVATION",
+      subtitle: "Laboratories, research culture, and problem-solving",
+      description: "Students learn through practical science, guided experimentation, and structured academic support across modern learning spaces.",
+      gradient: "from-emerald-800 via-teal-700 to-sky-700",
       textColor: "text-white"
     },
     {
       id: 3,
-      title: "FUTURE INNOVATORS",
-      subtitle: "Preparing Tomorrow's Leaders",
-      description: "Join a community of ambitious students and dedicated educators committed to excellence in science and technology.",
-      gradient: "from-orange-500 via-red-500 to-pink-600",
+      title: "HOLISTIC STUDENT FORMATION",
+      subtitle: "Leadership, responsibility, and academic growth",
+      description: "Our school culture combines classroom achievement with discipline, mentorship, student leadership, and community responsibility.",
+      gradient: "from-amber-700 via-rose-700 to-slate-800",
       textColor: "text-white"
     },
     {
       id: 4,
-      title: "COLLEGE PREPARATION",
-      subtitle: "Ready for Higher Education",
-      description: "Our rigorous curriculum and support system ensure students are well-prepared for university studies and future careers.",
-      gradient: "from-indigo-600 via-blue-600 to-cyan-500",
+      title: "UNIVERSITY AND CAREER READINESS",
+      subtitle: "Structured preparation for the next stage",
+      description: "Through a rigorous curriculum, guidance, and digital systems, learners are prepared for higher education and future opportunity.",
+      gradient: "from-indigo-900 via-blue-800 to-cyan-700",
       textColor: "text-white"
     }
   ];
@@ -108,17 +109,19 @@ const Hero = () => {
 
           <div className="flex flex-col sm:flex-row justify-center gap-4">
             <Button 
+              asChild
               size="lg"
-              className="bg-orange-500 hover:bg-orange-600 text-white px-8 py-4 text-lg font-semibold rounded-full transition-all duration-300 hover:scale-105"
+              className="bg-amber-500 hover:bg-amber-400 text-slate-950 px-8 py-4 text-lg font-semibold rounded-full transition-all duration-300 hover:scale-105"
             >
-              APPLY NOW
+              <Link to="/enroll">Begin Application</Link>
             </Button>
             <Button 
+              asChild
               size="lg"
               variant="outline"
-              className="border-2 border-white text-green  hover:bg-white hover:text-gray-900 px-8 py-4 text-lg font-semibold rounded-full transition-all duration-300 hover:scale-105"
+              className="border-2 border-white text-slate-950 hover:bg-white hover:text-gray-900 px-8 py-4 text-lg font-semibold rounded-full transition-all duration-300 hover:scale-105"
             >
-              LEARN MORE
+              <a href="/#academics">Explore Academics</a>
             </Button>
           </div>
         </div>

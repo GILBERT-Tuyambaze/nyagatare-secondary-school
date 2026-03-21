@@ -7,6 +7,7 @@ import { getBoardMembers } from '@/services/firestoreService'
 import { BoardMember } from '@/types/database'
 import Header from '@/components/Header'
 import Footer from '@/components/Footer'
+import Seo from '@/components/Seo'
 
 const BoardMembers: React.FC = () => {
   const [boardMembers, setBoardMembers] = useState<BoardMember[]>([])
@@ -65,7 +66,7 @@ const BoardMembers: React.FC = () => {
     return (
       <>
         <Header />
-        <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-12 pt-24">
+        <div className="min-h-screen bg-[linear-gradient(180deg,#f8fafc_0%,#fffdf7_100%)] pb-20 pt-32">
           <div className="container mx-auto px-4">
             <div className="text-center">
               <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600 mx-auto"></div>
@@ -80,15 +81,21 @@ const BoardMembers: React.FC = () => {
 
   return (
     <>
+      <Seo
+        title="Governance and Board Members | Nyagatare Secondary School"
+        description="Meet the leadership, teaching representatives, and parent board members who support governance at Nyagatare Secondary School."
+        path="/board-members"
+      />
       <Header />
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-12 pt-24">
+      <main id="main-content" className="min-h-screen bg-[linear-gradient(180deg,#f8fafc_0%,#fffdf7_100%)] pb-20 pt-32">
         <div className="container mx-auto px-4">
           {/* Header */}
-          <div className="text-center mb-12">
-            <h1 className="text-4xl font-bold text-gray-900 mb-4">
+          <div className="mb-12 rounded-[2rem] border border-slate-200 bg-white/90 px-6 py-10 text-center shadow-sm sm:px-10">
+            <p className="text-sm font-semibold uppercase tracking-[0.3em] text-amber-700">Governance</p>
+            <h1 className="mt-4 text-4xl font-bold text-slate-900 md:text-5xl">
               Our Board Members
             </h1>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+            <p className="mx-auto mt-4 max-w-3xl text-lg text-slate-600 md:text-xl">
               Meet the dedicated individuals who guide our school's mission and ensure the highest standards of education for our students.
             </p>
           </div>
@@ -97,15 +104,15 @@ const BoardMembers: React.FC = () => {
           {Object.entries(groupedMembers).map(([category, members]) => (
             <div key={category} className="mb-12">
               <div className="text-center mb-8">
-                <h2 className="text-3xl font-bold text-gray-900 mb-2">
+                <h2 className="text-3xl font-bold text-slate-900 mb-2">
                   {getCategoryTitle(category)}
                 </h2>
-                <div className="w-24 h-1 bg-blue-600 mx-auto"></div>
+                <div className="mx-auto h-1 w-24 bg-amber-600"></div>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {members.map((member) => (
-                  <Card key={member.id} className="hover:shadow-lg transition-shadow duration-300">
+                  <Card key={member.id} className="border-slate-200 bg-white shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-xl">
                     <CardHeader className="text-center">
                       <div className="flex justify-center mb-4">
                         <Avatar className="w-24 h-24">
@@ -113,13 +120,13 @@ const BoardMembers: React.FC = () => {
                             src={member.profile_image || ''} 
                             alt={member.full_name}
                           />
-                          <AvatarFallback className="text-lg font-semibold bg-blue-100 text-blue-600">
+                          <AvatarFallback className="bg-amber-100 text-lg font-semibold text-amber-700">
                             {member.full_name.split(' ').map(n => n[0]).join('')}
                           </AvatarFallback>
                         </Avatar>
                       </div>
                       <CardTitle className="text-xl">{member.full_name}</CardTitle>
-                      <CardDescription className="text-base font-medium text-blue-600">
+                      <CardDescription className="text-base font-medium text-amber-700">
                         {member.position}
                       </CardDescription>
                       <Badge className={`w-fit mx-auto ${getCategoryColor(member.category)}`}>
@@ -180,7 +187,7 @@ const BoardMembers: React.FC = () => {
             </div>
           ))}
         </div>
-      </div>
+      </main>
       <Footer />
     </>
   )

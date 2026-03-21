@@ -1,6 +1,24 @@
-import { addDoc, collection, deleteDoc, doc, getDoc, getDocs, orderBy, query, setDoc, updateDoc, where } from 'firebase/firestore'
-import { db } from '@/firebase'
-import { Application, Event, Donation, BoardMember, Student } from '@/types/database'
+import { addDoc, collection, deleteDoc, doc, getDoc, getDocs, onSnapshot, orderBy, query, setDoc, updateDoc, where } from 'firebase/firestore'
+import { getDownloadURL, ref, uploadBytes } from 'firebase/storage'
+import { db, storage } from '@/firebase'
+import {
+  ActivityLog,
+  Application,
+  BoardMember,
+  ChatMessage,
+  ChatThread,
+  ClassTeacherAssignment,
+  ContentPost,
+  DisciplineCase,
+  Donation,
+  Event,
+  LearningResource,
+  MarkComment,
+  NewsletterSubscriber,
+  SchoolSubject,
+  Student,
+  StudentMark,
+} from '@/types/database'
 import { ClassPost, Classroom, ClassStudent, Invite, Role, SystemUser } from '@/loginpage/types'
 import { rolePermissions } from '@/loginpage/lib/rbac'
 
@@ -31,6 +49,8 @@ const generateApplicationId = () => {
   return `APP-${year}-${stamp}`
 }
 
+const createSafeFileName = (name: string) => name.replace(/[^a-zA-Z0-9._-]+/g, '-').replace(/-+/g, '-').slice(0, 120)
+
 const applicationsCollection = collection(db, 'applications')
 const eventsCollection = collection(db, 'events')
 const donationsCollection = collection(db, 'donations')
@@ -38,10 +58,25 @@ const boardMembersCollection = collection(db, 'board_members')
 const studentsCollection = collection(db, 'students')
 const accessProfilesCollection = collection(db, 'access_profiles')
 const invitesCollection = collection(db, 'invites')
+const contentPostsCollection = collection(db, 'content_posts')
+const subjectsCollection = collection(db, 'subjects')
+const classTeacherAssignmentsCollection = collection(db, 'class_teacher_assignments')
+const learningResourcesCollection = collection(db, 'learning_resources')
+const studentMarksCollection = collection(db, 'student_marks')
+const markCommentsCollection = collection(db, 'mark_comments')
+const chatThreadsCollection = collection(db, 'chat_threads')
+const chatMessagesCollection = collection(db, 'chat_messages')
+const disciplineCasesCollection = collection(db, 'discipline_cases')
+const activityLogsCollection = collection(db, 'activity_logs')
 const classesCollection = collection(db, 'classes')
 const classStudentsCollection = collection(db, 'class_students')
 const classPostsCollection = collection(db, 'class_posts')
 const systemSettingsCollection = collection(db, 'system_settings')
+const newsletterSubscribersCollection = collection(db, 'newsletter_subscribers')
+const newsletterSourceLabels = {
+  footer: 'Homepage Footer',
+  events: 'Events Page',
+} as const
 
 const mockBoardMembers: BoardMember[] = [
   {
@@ -112,11 +147,51 @@ const mockDashboardStats = {
   applicationsByStatus: {
     pending: 23,
     review: 15,
-    approved: 89,
+    admitted: 89,
     rejected: 12,
     waitlist: 9,
   },
 }
+
+const mockContentPosts: ContentPost[] = [
+  {
+    id: 'content-1',
+    title: 'STEM Fair 2026 Launch',
+    slug: 'stem-fair-2026-launch',
+    type: 'news',
+    status: 'published',
+    excerpt: 'Our student innovators are preparing a flagship STEM showcase for the new academic year.',
+    body: 'Nyagatare Secondary School is opening the STEM Fair 2026 season with new robotics, engineering, and software design tracks led by our best tech students.',
+    author_name: 'NSS Communications',
+    published_at: '2026-03-18T09:00:00.000Z',
+    created_at: '2026-03-18T09:00:00.000Z',
+    updated_at: '2026-03-18T09:00:00.000Z',
+  },
+  {
+    id: 'content-2',
+    title: 'Parent Leadership Forum',
+    slug: 'parent-leadership-forum',
+    type: 'announcement',
+    status: 'review',
+    excerpt: 'Leadership and parent representatives are aligning on term priorities and student wellbeing.',
+    body: 'The upcoming parent leadership forum will bring together school leaders, class representatives, and digital communication coordinators.',
+    author_name: 'Governance Office',
+    created_at: '2026-03-17T12:30:00.000Z',
+    updated_at: '2026-03-19T08:15:00.000Z',
+  },
+  {
+    id: 'content-3',
+    title: 'How NSS Builds Future Tech Leaders',
+    slug: 'how-nss-builds-future-tech-leaders',
+    type: 'blog',
+    status: 'draft',
+    excerpt: 'A closer look at the school culture, digital systems, and mentoring behind our strongest technology students.',
+    body: 'Nyagatare Secondary School continues to invest in practical problem solving, peer mentorship, and digital fluency so students graduate ready to lead in technology-rich environments.',
+    author_name: 'Digital Learning Desk',
+    created_at: '2026-03-16T14:45:00.000Z',
+    updated_at: '2026-03-20T10:20:00.000Z',
+  },
+]
 
 // Applications
 export const getApplications = async () => {
@@ -168,6 +243,73 @@ export const createApplication = async (
   } catch (error) {
     console.error('Error creating application:', error)
     throw error
+  }
+}
+
+export const submitPublicApplication = async ({
+  origin,
+  application,
+}: {
+  origin: string
+  application: Omit<Application, 'id' | 'application_id' | 'created_at' | 'updated_at'>
+}) => {
+  const settings = await getApplicationsSettings()
+  if (settings.isOpen === false) {
+    throw new Error('Applications are currently closed. Please try again later.')
+  }
+
+  const created_at = nowIso()
+  const application_id = generateApplicationId()
+  const normalizedEmail = application.email?.trim().toLowerCase() || ''
+
+  let applicantInviteId: string | undefined
+  let applicantSignupUrl: string | undefined
+
+  if (normalizedEmail) {
+    const invite = await createApplicantInvite({
+      applicationId: application_id,
+      email: normalizedEmail,
+      origin,
+    })
+
+    applicantInviteId = invite.id
+    applicantSignupUrl = invite.signupUrl
+  }
+
+  const document = removeUndefined({
+    ...application,
+    email: normalizedEmail || undefined,
+    application_id,
+    applicant_invite_id: applicantInviteId,
+    applicant_signup_url: applicantSignupUrl,
+    created_at,
+    updated_at: created_at,
+  })
+
+  const ref = await addDoc(applicationsCollection, document)
+  return withId(ref.id, document) as Application
+}
+
+export const uploadApplicantReport = async (file: File) => {
+  const extension = file.name.includes('.') ? file.name.slice(file.name.lastIndexOf('.')) : ''
+  const safeName = createSafeFileName(file.name.replace(extension, ''))
+  const objectPath = `application_reports/${Date.now()}-${createInviteToken()}-${safeName}${extension}`
+  const storageRef = ref(storage, objectPath)
+
+  await uploadBytes(storageRef, file, {
+    contentType: file.type || 'application/octet-stream',
+    customMetadata: {
+      uploadedFor: 'application-report',
+      originalName: file.name,
+    },
+  })
+
+  const downloadUrl = await getDownloadURL(storageRef)
+
+  return {
+    downloadUrl,
+    storagePath: objectPath,
+    fileName: file.name,
   }
 }
 
@@ -250,6 +392,315 @@ export const deleteEvent = async (id: string) => {
   }
 }
 
+// Content posts
+export const getContentPosts = async () => {
+  try {
+    const snapshot = await getDocs(query(contentPostsCollection, orderBy('updated_at', 'desc')))
+    return snapshot.docs.map((entry) => withId(entry.id, entry.data())) as ContentPost[]
+  } catch (error) {
+    console.error('Error fetching content posts:', error)
+    return mockContentPosts
+  }
+}
+
+export const createContentPost = async (post: Omit<ContentPost, 'id' | 'created_at' | 'updated_at'>) => {
+  try {
+    const created_at = nowIso()
+    const document = {
+      ...post,
+      created_at,
+      updated_at: created_at,
+    }
+    const ref = await addDoc(contentPostsCollection, document)
+    return withId(ref.id, document) as ContentPost
+  } catch (error) {
+    console.error('Error creating content post:', error)
+    throw error
+  }
+}
+
+export const updateContentPost = async (id: string, updates: Partial<ContentPost>) => {
+  try {
+    const documentRef = doc(contentPostsCollection, id)
+    await updateDoc(
+      documentRef,
+      removeUndefined({
+        ...updates,
+        updated_at: nowIso(),
+      })
+    )
+    const snapshot = await getDoc(documentRef)
+    return withId(snapshot.id, snapshot.data()) as ContentPost
+  } catch (error) {
+    console.error('Error updating content post:', error)
+    throw error
+  }
+}
+
+export const deleteContentPost = async (id: string) => {
+  try {
+    await deleteDoc(doc(contentPostsCollection, id))
+  } catch (error) {
+    console.error('Error deleting content post:', error)
+    throw error
+  }
+}
+
+// Class and learning system
+export const getSubjects = async () => {
+  try {
+    const snapshot = await getDocs(query(subjectsCollection, orderBy('name', 'asc')))
+    return snapshot.docs.map((entry) => withId(entry.id, entry.data())) as SchoolSubject[]
+  } catch (error) {
+    console.error('Error fetching subjects:', error)
+    return []
+  }
+}
+
+export const getClassTeacherAssignments = async () => {
+  try {
+    const snapshot = await getDocs(query(classTeacherAssignmentsCollection, orderBy('created_at', 'desc')))
+    return snapshot.docs.map((entry) => withId(entry.id, entry.data())) as ClassTeacherAssignment[]
+  } catch (error) {
+    console.error('Error fetching class teacher assignments:', error)
+    return []
+  }
+}
+
+export const createLearningResource = async (resource: Omit<LearningResource, 'id' | 'created_at' | 'updated_at'>) => {
+  try {
+    const created_at = nowIso()
+    const document = {
+      ...resource,
+      created_at,
+      updated_at: created_at,
+    }
+    const ref = await addDoc(learningResourcesCollection, document)
+    return withId(ref.id, document) as LearningResource
+  } catch (error) {
+    console.error('Error creating learning resource:', error)
+    throw error
+  }
+}
+
+export const getLearningResources = async () => {
+  try {
+    const snapshot = await getDocs(query(learningResourcesCollection, orderBy('created_at', 'desc')))
+    return snapshot.docs.map((entry) => withId(entry.id, entry.data())) as LearningResource[]
+  } catch (error) {
+    console.error('Error fetching learning resources:', error)
+    return []
+  }
+}
+
+export const createStudentMark = async (mark: Omit<StudentMark, 'id' | 'created_at' | 'updated_at'>) => {
+  try {
+    const created_at = nowIso()
+    const document = {
+      ...mark,
+      created_at,
+      updated_at: created_at,
+    }
+    const ref = await addDoc(studentMarksCollection, document)
+    return withId(ref.id, document) as StudentMark
+  } catch (error) {
+    console.error('Error creating student mark:', error)
+    throw error
+  }
+}
+
+export const updateStudentMark = async (id: string, updates: Partial<StudentMark>) => {
+  try {
+    const documentRef = doc(studentMarksCollection, id)
+    await updateDoc(
+      documentRef,
+      removeUndefined({
+        ...updates,
+        updated_at: nowIso(),
+      })
+    )
+    const snapshot = await getDoc(documentRef)
+    return withId(snapshot.id, snapshot.data()) as StudentMark
+  } catch (error) {
+    console.error('Error updating student mark:', error)
+    throw error
+  }
+}
+
+export const getStudentMarks = async () => {
+  try {
+    const snapshot = await getDocs(query(studentMarksCollection, orderBy('created_at', 'desc')))
+    return snapshot.docs.map((entry) => withId(entry.id, entry.data())) as StudentMark[]
+  } catch (error) {
+    console.error('Error fetching student marks:', error)
+    return []
+  }
+}
+
+export const addMarkComment = async (comment: Omit<MarkComment, 'id' | 'created_at'>) => {
+  try {
+    const created_at = nowIso()
+    const document = {
+      ...comment,
+      created_at,
+    }
+    const ref = await addDoc(markCommentsCollection, document)
+    return withId(ref.id, document) as MarkComment
+  } catch (error) {
+    console.error('Error creating mark comment:', error)
+    throw error
+  }
+}
+
+export const getMarkComments = async () => {
+  try {
+    const snapshot = await getDocs(query(markCommentsCollection, orderBy('created_at', 'desc')))
+    return snapshot.docs.map((entry) => withId(entry.id, entry.data())) as MarkComment[]
+  } catch (error) {
+    console.error('Error fetching mark comments:', error)
+    return []
+  }
+}
+
+export const getChatThreads = async () => {
+  try {
+    const snapshot = await getDocs(query(chatThreadsCollection, orderBy('updated_at', 'desc')))
+    return snapshot.docs.map((entry) => withId(entry.id, entry.data())) as ChatThread[]
+  } catch (error) {
+    console.error('Error fetching chat threads:', error)
+    return []
+  }
+}
+
+export const createChatThread = async (thread: Omit<ChatThread, 'id' | 'created_at' | 'updated_at'>) => {
+  try {
+    const created_at = nowIso()
+    const document = {
+      ...thread,
+      created_at,
+      updated_at: created_at,
+    }
+    const ref = await addDoc(chatThreadsCollection, document)
+    return withId(ref.id, document) as ChatThread
+  } catch (error) {
+    console.error('Error creating chat thread:', error)
+    throw error
+  }
+}
+
+export const getOrCreatePrivateSubjectThread = async ({
+  classId,
+  subjectId,
+  subjectName,
+  studentId,
+  studentName,
+  teacherUserId,
+  teacherName,
+}: {
+  classId: string
+  subjectId: string
+  subjectName: string
+  studentId: string
+  studentName: string
+  teacherUserId: string
+  teacherName: string
+}) => {
+  try {
+    const snapshot = await getDocs(
+      query(
+        chatThreadsCollection,
+        where('class_id', '==', classId),
+        where('type', '==', 'private_subject'),
+        where('subject_id', '==', subjectId),
+        where('student_id', '==', studentId),
+        where('teacher_user_id', '==', teacherUserId)
+      )
+    )
+
+    const existing = snapshot.docs[0]
+    if (existing) {
+      return withId(existing.id, existing.data()) as ChatThread
+    }
+
+    return await createChatThread({
+      class_id: classId,
+      type: 'private_subject',
+      title: `${studentName} and ${teacherName}`,
+      subject_id: subjectId,
+      subject_name: subjectName,
+      student_id: studentId,
+      teacher_user_id: teacherUserId,
+    })
+  } catch (error) {
+    console.error('Error creating private subject thread:', error)
+    throw error
+  }
+}
+
+export const createChatMessage = async (message: Omit<ChatMessage, 'id' | 'created_at'>) => {
+  try {
+    const created_at = nowIso()
+    const document = {
+      ...message,
+      created_at,
+    }
+    const ref = await addDoc(chatMessagesCollection, document)
+
+    const threadRef = doc(chatThreadsCollection, message.thread_id)
+    await updateDoc(threadRef, { updated_at: created_at })
+
+    return withId(ref.id, document) as ChatMessage
+  } catch (error) {
+    console.error('Error creating chat message:', error)
+    throw error
+  }
+}
+
+export const getChatMessages = async () => {
+  try {
+    const snapshot = await getDocs(query(chatMessagesCollection, orderBy('created_at', 'asc')))
+    return snapshot.docs.map((entry) => withId(entry.id, entry.data())) as ChatMessage[]
+  } catch (error) {
+    console.error('Error fetching chat messages:', error)
+    return []
+  }
+}
+
+export const getDisciplineCases = async () => {
+  try {
+    const snapshot = await getDocs(query(disciplineCasesCollection, orderBy('created_at', 'desc')))
+    return snapshot.docs.map((entry) => withId(entry.id, entry.data())) as DisciplineCase[]
+  } catch (error) {
+    console.error('Error fetching discipline cases:', error)
+    return []
+  }
+}
+
+export const getActivityLogs = async () => {
+  try {
+    const snapshot = await getDocs(query(activityLogsCollection, orderBy('created_at', 'desc')))
+    return snapshot.docs.map((entry) => withId(entry.id, entry.data())) as ActivityLog[]
+  } catch (error) {
+    console.error('Error fetching activity logs:', error)
+    return []
+  }
+}
+
+export const logActivity = async (entry: Omit<ActivityLog, 'id' | 'created_at'>) => {
+  try {
+    const created_at = nowIso()
+    const document = {
+      ...entry,
+      created_at,
+    }
+    const ref = await addDoc(activityLogsCollection, document)
+    return withId(ref.id, document) as ActivityLog
+  } catch (error) {
+    console.error('Error logging activity:', error)
+    throw error
+  }
+}
+
 // Donations
 export const getDonations = async () => {
   try {
@@ -285,6 +736,17 @@ export const getBoardMembers = async () => {
     return sortByString(sortByString(members, (member) => member.full_name), (member) => member.category)
   } catch (error) {
     console.error('Error fetching board members:', error)
+    return mockBoardMembers
+  }
+}
+
+export const getAllBoardMembers = async () => {
+  try {
+    const snapshot = await getDocs(query(boardMembersCollection, orderBy('full_name', 'asc')))
+    const members = snapshot.docs.map((entry) => withId(entry.id, entry.data())) as BoardMember[]
+    return sortByString(sortByString(members, (member) => member.full_name), (member) => member.category)
+  } catch (error) {
+    console.error('Error fetching all board members:', error)
     return mockBoardMembers
   }
 }
@@ -352,6 +814,38 @@ export const getAccessProfiles = async () => {
   } catch (error) {
     console.error('Error fetching access profiles:', error)
     return []
+  }
+}
+
+export const getAccessProfileById = async (id: string) => {
+  try {
+    const snapshot = await getDoc(doc(accessProfilesCollection, id))
+    if (!snapshot.exists()) return null
+    return withId(snapshot.id, snapshot.data()) as SystemUser
+  } catch (error) {
+    console.error('Error fetching access profile by id:', error)
+    return null
+  }
+}
+
+export const updateAccessProfileRecord = async (id: string, updates: Partial<SystemUser> & Record<string, unknown>) => {
+  try {
+    const documentRef = doc(accessProfilesCollection, id)
+    await setDoc(documentRef, removeUndefined(updates), { merge: true })
+    const snapshot = await getDoc(documentRef)
+    return snapshot.exists() ? (withId(snapshot.id, snapshot.data()) as SystemUser) : null
+  } catch (error) {
+    console.error('Error updating access profile:', error)
+    throw error
+  }
+}
+
+export const deleteAccessProfileRecord = async (id: string) => {
+  try {
+    await deleteDoc(doc(accessProfilesCollection, id))
+  } catch (error) {
+    console.error('Error deleting access profile:', error)
+    throw error
   }
 }
 
@@ -565,16 +1059,218 @@ export const getClasses = async () => {
   }
 }
 
+export const createClassroom = async (classroom: Omit<Classroom, 'id' | 'created_at'>) => {
+  try {
+    const created_at = nowIso()
+    const document = {
+      ...classroom,
+      created_at,
+    }
+    const ref = await addDoc(classesCollection, document)
+    return withId(ref.id, document) as Classroom
+  } catch (error) {
+    console.error('Error creating classroom:', error)
+    throw error
+  }
+}
+
+export const updateClassroom = async (id: string, updates: Partial<Classroom>) => {
+  try {
+    const documentRef = doc(classesCollection, id)
+    await updateDoc(documentRef, removeUndefined(updates))
+    const snapshot = await getDoc(documentRef)
+    return withId(snapshot.id, snapshot.data()) as Classroom
+  } catch (error) {
+    console.error('Error updating classroom:', error)
+    throw error
+  }
+}
+
+export const createClassTeacherAssignment = async (
+  assignment: Omit<ClassTeacherAssignment, 'id' | 'created_at' | 'updated_at'>
+) => {
+  try {
+    const created_at = nowIso()
+    const document = {
+      ...assignment,
+      created_at,
+      updated_at: created_at,
+    }
+    const ref = await addDoc(classTeacherAssignmentsCollection, document)
+    return withId(ref.id, document) as ClassTeacherAssignment
+  } catch (error) {
+    console.error('Error creating class teacher assignment:', error)
+    throw error
+  }
+}
+
+export const updateClassTeacherAssignment = async (
+  id: string,
+  updates: Partial<Omit<ClassTeacherAssignment, 'id' | 'created_at' | 'updated_at'>> & Record<string, unknown>
+) => {
+  try {
+    const documentRef = doc(classTeacherAssignmentsCollection, id)
+    await updateDoc(
+      documentRef,
+      removeUndefined({
+        ...updates,
+        updated_at: nowIso(),
+      })
+    )
+    const snapshot = await getDoc(documentRef)
+    return withId(snapshot.id, snapshot.data()) as ClassTeacherAssignment
+  } catch (error) {
+    console.error('Error updating class teacher assignment:', error)
+    throw error
+  }
+}
+
+export const deleteClassTeacherAssignment = async (id: string) => {
+  try {
+    await deleteDoc(doc(classTeacherAssignmentsCollection, id))
+  } catch (error) {
+    console.error('Error deleting class teacher assignment:', error)
+    throw error
+  }
+}
+
+export const assignStudentToClass = async ({
+  class_id,
+  student_id,
+}: {
+  class_id: string
+  student_id: string
+}) => {
+  try {
+    const existingMemberships = await getDocs(query(classStudentsCollection, where('student_id', '==', student_id)))
+
+    for (const existing of existingMemberships.docs) {
+      const existingData = existing.data() as Partial<ClassStudent>
+      if (existingData.class_id === class_id) {
+        return withId(existing.id, existing.data()) as ClassStudent
+      }
+      await deleteDoc(doc(classStudentsCollection, existing.id))
+    }
+
+    const document = { class_id, student_id }
+    const ref = await addDoc(classStudentsCollection, document)
+    return withId(ref.id, document) as ClassStudent
+  } catch (error) {
+    console.error('Error assigning student to class:', error)
+    throw error
+  }
+}
+
 export const getApplicationsSettings = async () => {
   try {
     const snapshot = await getDoc(doc(systemSettingsCollection, 'applications'))
     if (!snapshot.exists()) {
-      return { isOpen: true }
+      return { isOpen: true, updated_at: null as string | null }
     }
-    return { isOpen: snapshot.data().isOpen !== false }
+    return {
+      isOpen: snapshot.data().isOpen !== false,
+      updated_at: (snapshot.data().updated_at as string | undefined) ?? null,
+    }
   } catch (error) {
     console.error('Error fetching application settings:', error)
-    return { isOpen: true }
+    return { isOpen: true, updated_at: null as string | null }
+  }
+}
+
+export const subscribeApplicationsSettings = (
+  callback: (settings: { isOpen: boolean; updated_at: string | null }) => void
+) => {
+  const settingsRef = doc(systemSettingsCollection, 'applications')
+
+  return onSnapshot(
+    settingsRef,
+    (snapshot) => {
+      if (!snapshot.exists()) {
+        callback({ isOpen: true, updated_at: null })
+        return
+      }
+
+      callback({
+        isOpen: snapshot.data().isOpen !== false,
+        updated_at: (snapshot.data().updated_at as string | undefined) ?? null,
+      })
+    },
+    (error) => {
+      console.error('Error subscribing to application settings:', error)
+      callback({ isOpen: true, updated_at: null })
+    }
+  )
+}
+
+export const createNewsletterSubscriber = async ({
+  email,
+  source,
+}: {
+  email: string
+  source: 'footer' | 'events'
+}) => {
+  const normalizedEmail = email.trim().toLowerCase()
+
+  if (!normalizedEmail) {
+    throw new Error('Email is required.')
+  }
+
+  const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  if (!emailPattern.test(normalizedEmail)) {
+    throw new Error('Please provide a valid email address.')
+  }
+
+  const existing = await getDocs(query(newsletterSubscribersCollection, where('email', '==', normalizedEmail)))
+  const existingDoc = existing.docs[0]
+  const timestamp = nowIso()
+  const sourceLabel = newsletterSourceLabels[source]
+
+  if (existingDoc) {
+    const existingData = existingDoc.data() as Partial<NewsletterSubscriber>
+    const mergedSources = Array.from(
+      new Set([...(existingData.sources ?? ([existingData.source].filter(Boolean) as Array<'footer' | 'events'>)), source])
+    )
+
+    await updateDoc(doc(newsletterSubscribersCollection, existingDoc.id), {
+      source,
+      source_label: sourceLabel,
+      sources: mergedSources,
+      status: 'subscribed',
+      unsubscribed_at: null,
+      updated_at: timestamp,
+    })
+    const snapshot = await getDoc(doc(newsletterSubscribersCollection, existingDoc.id))
+    return {
+      subscriber: withId(snapshot.id, snapshot.data()) as NewsletterSubscriber,
+      duplicate: true,
+    }
+  }
+
+  const document = {
+    email: normalizedEmail,
+    source,
+    source_label: sourceLabel,
+    sources: [source],
+    status: 'subscribed' as const,
+    unsubscribed_at: null,
+    created_at: timestamp,
+    updated_at: timestamp,
+  }
+
+  const ref = await addDoc(newsletterSubscribersCollection, document)
+  return {
+    subscriber: withId(ref.id, document) as NewsletterSubscriber,
+    duplicate: false,
+  }
+}
+
+export const getNewsletterSubscribers = async () => {
+  try {
+    const snapshot = await getDocs(query(newsletterSubscribersCollection, orderBy('created_at', 'desc')))
+    return snapshot.docs.map((entry) => withId(entry.id, entry.data())) as NewsletterSubscriber[]
+  } catch (error) {
+    console.error('Error fetching newsletter subscribers:', error)
+    return []
   }
 }
 
@@ -590,7 +1286,10 @@ export const updateApplicationsSettings = async (isOpen: boolean) => {
   )
 
   const snapshot = await getDoc(settingsRef)
-  return { isOpen: snapshot.data()?.isOpen !== false }
+  return {
+    isOpen: snapshot.data()?.isOpen !== false,
+    updated_at: (snapshot.data()?.updated_at as string | undefined) ?? null,
+  }
 }
 
 export const getClassStudents = async () => {
@@ -643,7 +1342,7 @@ export const getDashboardStats = async () => {
       applicationsByStatus: {
         pending: applications.filter((application) => application.status === 'pending').length,
         review: applications.filter((application) => application.status === 'review').length,
-        approved: applications.filter((application) => application.status === 'approved').length,
+        admitted: applications.filter((application) => application.status === 'admitted').length,
         rejected: applications.filter((application) => application.status === 'rejected').length,
         waitlist: applications.filter((application) => application.status === 'waitlist').length,
       },

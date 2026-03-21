@@ -126,7 +126,7 @@ export default function InviteSignupPage() {
           <CardHeader>
             <CardTitle className="text-2xl">Complete Your Invite</CardTitle>
             <CardDescription className="text-slate-300">
-              Create your NSS account for the invited role and enter the system directly.
+              Create your NSS account for the invited role using this one-time secure link and enter the system directly.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-5">

@@ -6,10 +6,10 @@ import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import { useAuth } from '@/contexts/AuthContext'
-import { getApplications, getApplicationsSettings, updateApplication, updateApplicationsSettings } from '@/services/firestoreService'
+import { getApplications, getApplicationsSettings, subscribeApplicationsSettings, updateApplication, updateApplicationsSettings } from '@/services/firestoreService'
 import { Application } from '@/types/database'
 import { Card } from '../components/Card'
-import { admissionsDecisionStatuses } from '../lib/admissions'
+import { admissionsDecisionStatuses, buildDecisionNote } from '../lib/admissions'
 
 const statusOptions: Application['status'][] = [...admissionsDecisionStatuses]
 
@@ -23,6 +23,7 @@ export default function ApplicationsPage() {
   const [communicationNotes, setCommunicationNotes] = useState('')
   const [decisionNotes, setDecisionNotes] = useState('')
   const [applicationsOpen, setApplicationsOpen] = useState(true)
+  const [applicationsUpdatedAt, setApplicationsUpdatedAt] = useState<string | null>(null)
   const [working, setWorking] = useState(false)
   const [message, setMessage] = useState('')
 
@@ -30,6 +31,7 @@ export default function ApplicationsPage() {
     const data = await getApplications()
     const settings = await getApplicationsSettings()
     setApplicationsOpen(settings.isOpen)
+    setApplicationsUpdatedAt(settings.updated_at)
     setApplications(data)
     if (!selectedId && data[0]) {
       setSelectedId(data[0].id)
@@ -41,6 +43,15 @@ export default function ApplicationsPage() {
 
   useEffect(() => {
     loadApplications()
+  }, [])
+
+  useEffect(() => {
+    const unsubscribe = subscribeApplicationsSettings((settings) => {
+      setApplicationsOpen(settings.isOpen)
+      setApplicationsUpdatedAt(settings.updated_at)
+    })
+
+    return unsubscribe
   }, [])
 
   const filteredApplications = useMemo(
@@ -74,12 +85,24 @@ export default function ApplicationsPage() {
     setWorking(true)
     setMessage('')
     try {
+      const nextDecisionNote =
+        status === 'admitted' || status === 'rejected'
+          ? decisionNotes.trim() ||
+            selectedApplication.decision_notes ||
+            buildDecisionNote(
+              status,
+              `${selectedApplication.first_name} ${selectedApplication.last_name}`,
+              selectedApplication.applying_grade
+            )
+          : selectedApplication.decision_notes
+
       await updateApplication(selectedApplication.id, {
         status,
-        decision_notes: status === 'admitted' || status === 'rejected' ? decisionNotes : selectedApplication.decision_notes,
+        decision_notes: nextDecisionNote,
         reviewed_by: accessProfile.displayName,
         reviewed_at: new Date().toISOString(),
       })
+      setDecisionNotes(nextDecisionNote || '')
       setMessage(`Application decision updated to ${status}.`)
       await loadApplications()
     } catch (error) {
@@ -116,6 +139,7 @@ export default function ApplicationsPage() {
     try {
       const settings = await updateApplicationsSettings(!applicationsOpen)
       setApplicationsOpen(settings.isOpen)
+      setApplicationsUpdatedAt(settings.updated_at)
       setMessage(settings.isOpen ? 'Application intake is now open.' : 'Application intake is now closed.')
     } catch (error) {
       setMessage(error instanceof Error ? error.message : 'Failed to update application intake setting.')
@@ -133,15 +157,24 @@ export default function ApplicationsPage() {
             <p className="mt-1 text-sm text-slate-300">
               {applicationsOpen ? 'Applications are currently open for new applicants.' : 'Applications are currently closed.'}
             </p>
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              <Badge className={applicationsOpen ? 'bg-emerald-500/15 text-emerald-200 hover:bg-emerald-500/15' : 'bg-rose-500/15 text-rose-200 hover:bg-rose-500/15'}>
+                {applicationsOpen ? 'Open for applicants' : 'Closed to applicants'}
+              </Badge>
+              {applicationsUpdatedAt ? <span className="text-xs text-slate-400">Updated {new Date(applicationsUpdatedAt).toLocaleString()}</span> : null}
+            </div>
           </div>
           <Button
             type="button"
-            variant="outline"
-            className="border-slate-600 bg-slate-900/80 text-slate-100 hover:border-cyan-400/40 hover:bg-slate-800 hover:text-white"
+            className={
+              applicationsOpen
+                ? 'bg-rose-500 text-white hover:bg-rose-400'
+                : 'bg-emerald-500 text-slate-950 hover:bg-emerald-400'
+            }
             onClick={handleToggleApplications}
             disabled={working}
           >
-            {applicationsOpen ? 'Close Applications' : 'Open Applications'}
+            {working ? 'Updating...' : applicationsOpen ? 'Close Applications' : 'Open Applications'}
           </Button>
         </div>
 
@@ -178,6 +211,7 @@ export default function ApplicationsPage() {
                     setSelectedId(application.id)
                     setNotes(application.admin_notes || '')
                     setCommunicationNotes(application.communication_notes || '')
+                    setDecisionNotes(application.decision_notes || '')
                   }}
                   className={`w-full rounded-2xl border p-4 text-left transition-colors ${
                     application.id === selectedId
@@ -227,6 +261,8 @@ export default function ApplicationsPage() {
                     <p><span className="font-semibold text-white">Phone:</span> {selectedApplication.phone || 'Not provided'}</p>
                     <p><span className="font-semibold text-white">Guardian:</span> {selectedApplication.guardian_name}</p>
                     <p><span className="font-semibold text-white">Guardian Phone:</span> {selectedApplication.guardian_phone}</p>
+                    <p><span className="font-semibold text-white">Urubuto ID:</span> {selectedApplication.urubuto_id || 'Not provided'}</p>
+                    <p><span className="font-semibold text-white">SDMS Code:</span> {selectedApplication.sdms_code || 'Not provided'}</p>
                     <p><span className="font-semibold text-white">Previous School:</span> {selectedApplication.previous_school}</p>
                   </div>
                   <div className="space-y-2 text-sm text-slate-300">
@@ -234,6 +270,21 @@ export default function ApplicationsPage() {
                     <p><span className="font-semibold text-white">Last Reviewed:</span> {selectedApplication.reviewed_at ? new Date(selectedApplication.reviewed_at).toLocaleString() : 'Not reviewed yet'}</p>
                     <p><span className="font-semibold text-white">Reviewed By:</span> {selectedApplication.reviewed_by || 'Not assigned yet'}</p>
                     <p><span className="font-semibold text-white">Score:</span> {selectedApplication.score}%</p>
+                    {selectedApplication.report_link ? (
+                      <p className="break-all">
+                        <span className="font-semibold text-white">Report Link:</span>{' '}
+                        <a
+                          href={selectedApplication.report_link}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-cyan-300 underline underline-offset-2 hover:text-cyan-200"
+                        >
+                          {selectedApplication.report_file_name || 'Open report document'}
+                        </a>
+                      </p>
+                    ) : (
+                      <p><span className="font-semibold text-white">Report Link:</span> Not provided</p>
+                    )}
                     {selectedApplication.applicant_signup_url ? (
                       <p className="break-all"><span className="font-semibold text-white">Applicant Signup:</span> {selectedApplication.applicant_signup_url}</p>
                     ) : null}

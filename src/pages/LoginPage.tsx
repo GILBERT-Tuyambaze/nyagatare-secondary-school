@@ -73,11 +73,11 @@ export default function LoginPage() {
         <div className="space-y-6">
           <div className="inline-flex items-center gap-2 rounded-full border border-cyan-400/20 bg-cyan-400/10 px-4 py-2 text-sm text-cyan-100">
             <Sparkles className="h-4 w-4" />
-            Secure access gateway
+            Open NSS Digital System
           </div>
           <div className="space-y-4">
             <h1 className="max-w-3xl text-4xl font-bold tracking-tight sm:text-6xl">
-              Enter the NSS high-tech system
+              Open NSS Digital System
             </h1>
             <p className="max-w-2xl text-base leading-7 text-slate-300 sm:text-lg">
               Sign in through the right access path for applicants, students, parents, or staff.
@@ -92,7 +92,7 @@ export default function LoginPage() {
             <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
               <ShieldCheck className="h-6 w-6 text-emerald-300" />
               <p className="mt-3 font-semibold">Protected Access</p>
-              <p className="mt-1 text-sm text-slate-300">Authenticated entry for school staff and approved users.</p>
+              <p className="mt-1 text-sm text-slate-300">Authenticated entry for school staff and authorized users.</p>
             </div>
             <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
               <LockKeyhole className="h-6 w-6 text-fuchsia-300" />

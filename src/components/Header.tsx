@@ -1,34 +1,46 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Menu, X } from 'lucide-react';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { BookOpenText, ChevronDown, Compass, GraduationCap, LayoutDashboard, Menu, Newspaper, Phone, ShieldCheck, Sparkles, X } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import { DonationModal } from './DonationModal';
+import { useAuth } from '@/contexts/AuthContext';
+import { getHeaderSystemNav } from '@/loginpage/lib/systemNavigation';
 
 const Header = ({ variant = 'default' }: { variant?: 'default' | 'system' }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isDonationOpen, setIsDonationOpen] = useState(false);
   const location = useLocation();
+  const { accessProfile } = useAuth();
+  const systemNavItems = [
+    ...getHeaderSystemNav(accessProfile).map((item) => ({
+      name: item.label,
+      href: item.to,
+      type: 'route' as const,
+      icon: item.icon,
+    })),
+    { name: 'Website', href: '/', type: 'route' as const, icon: Compass },
+  ];
+  const primarySystemNavItems = systemNavItems;
+  const overflowSystemNavItems: typeof systemNavItems = [];
+  const publicPrimaryNavItems = [
+    { name: 'About', href: '/#about', type: 'section' as const, icon: ShieldCheck },
+    { name: 'Academics', href: '/#academics', type: 'section' as const, icon: GraduationCap },
+    { name: 'Admissions', href: '/enroll', type: 'route' as const, icon: Sparkles },
+    { name: 'NSS System', href: '/login', type: 'route' as const, icon: LayoutDashboard },
+  ];
+  const publicOverflowNavItems = [
+    { name: 'Campus Life', href: '/#resources', type: 'section' as const, icon: Compass },
+    { name: 'Governance', href: '/board-members', type: 'route' as const, icon: ShieldCheck },
+    { name: 'Events', href: '/events', type: 'route' as const, icon: Newspaper },
+    { name: 'Blog', href: '/blog', type: 'route' as const, icon: BookOpenText },
+    { name: 'Contact', href: '/#contact', type: 'section' as const, icon: Phone },
+  ];
 
   const navItems =
     variant === 'system'
-      ? [
-          { name: 'SYSTEM HOME', href: '/system', type: 'route' },
-          { name: 'USERS', href: '/system/users', type: 'route' },
-          { name: 'AI HUB', href: '/system/ai-hub', type: 'route' },
-          { name: 'INVITE', href: '/system/invite', type: 'route' },
-          { name: 'WEBSITE', href: '/', type: 'route' },
-          { name: 'CONTACT', href: '/#contact', type: 'section' },
-        ]
-      : [
-          { name: 'ABOUT', href: '/#about', type: 'section' },
-          { name: 'INSTRUCTION', href: '/#academics', type: 'section' },
-          { name: 'RESOURCES', href: '/#resources', type: 'section' },
-          { name: 'BOARD MEMBERS', href: '/board-members', type: 'route' },
-          { name: 'ENROLL', href: '/enroll', type: 'route' },
-          { name: 'EVENTS', href: '/events', type: 'route' },
-          { name: 'SYSTEM', href: '/login', type: 'route' },
-          { name: 'CONTACT', href: '/#contact', type: 'section' },
-        ];
+      ? systemNavItems
+      : [...publicPrimaryNavItems, ...publicOverflowNavItems];
 
   const isSystem = variant === 'system';
   const headerClasses = isSystem
@@ -37,15 +49,15 @@ const Header = ({ variant = 'default' }: { variant?: 'default' | 'system' }) => 
   const brandAccentClasses = isSystem ? 'text-cyan-200' : 'text-gray-500';
   const brandTitleClasses = isSystem ? 'text-lg font-semibold text-white' : 'text-lg font-semibold text-gray-900';
   const navLinkClasses = isSystem
-    ? 'text-slate-200 hover:text-cyan-200 font-medium text-sm tracking-wide transition-colors'
-    : 'text-gray-700 hover:text-orange-600 font-medium text-sm tracking-wide transition-colors';
+    ? 'inline-flex items-center gap-2 rounded-full border border-slate-800 bg-slate-900/70 px-3 py-2 text-slate-200 hover:border-cyan-400/30 hover:text-cyan-200 font-medium text-sm transition-colors'
+    : 'inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 text-gray-700 hover:border-orange-300 hover:text-orange-600 font-medium text-sm transition-colors';
   const mobileButtonClasses = isSystem
     ? 'lg:hidden p-2 rounded-md text-slate-200 hover:text-cyan-200'
     : 'lg:hidden p-2 rounded-md text-gray-700 hover:text-orange-600';
   const utilityButtonClasses = isSystem
     ? 'bg-cyan-400 hover:bg-cyan-300 text-slate-950 px-6 py-2 font-semibold tracking-wide'
     : 'bg-orange-500 hover:bg-orange-600 text-white px-6 py-2 font-semibold tracking-wide';
-  const utilityLabel = isSystem ? 'MAIN SITE' : 'DONATE';
+  const utilityLabel = isSystem ? 'Main Site' : 'Donate';
 
   const scrollToSection = (sectionId: string) => {
     if (location.pathname !== '/') {
@@ -81,21 +93,22 @@ const Header = ({ variant = 'default' }: { variant?: 'default' | 'system' }) => 
                 <img src="/images/nss-logo.jpg"/>
               </div>
               <div>
-                <div className={`text-xs uppercase tracking-wide ${brandAccentClasses}`}>{isSystem ? 'NSS SYSTEM' : 'Nss'}</div>
+                <div className={`text-xs uppercase tracking-wide ${brandAccentClasses}`}>{isSystem ? 'NSS DIGITAL SYSTEM' : 'NSS Rwanda'}</div>
                 <div className={brandTitleClasses}>NYAGATARE SECONDARY SCHOOL</div>
               </div>
             </Link>
           </div>
 
           {/* Desktop Navigation */}
-          <nav className="hidden lg:flex items-center space-x-6">
-            {navItems.map((item) => (
+          <nav className="hidden lg:flex items-center justify-end gap-3">
+            {(isSystem ? primarySystemNavItems : publicPrimaryNavItems).map((item) => (
               item.type === 'route' ? (
                 <Link
                   key={item.name}
                   to={item.href}
                   className={navLinkClasses}
                 >
+                  {'icon' in item && item.icon ? <item.icon className="h-4 w-4" /> : null}
                   {item.name}
                 </Link>
               ) : (
@@ -104,10 +117,38 @@ const Header = ({ variant = 'default' }: { variant?: 'default' | 'system' }) => 
                   onClick={() => handleNavClick(item)}
                   className={navLinkClasses}
                 >
+                  {'icon' in item && item.icon ? <item.icon className="h-4 w-4" /> : null}
                   {item.name}
                 </button>
               )
             ))}
+            {(isSystem ? overflowSystemNavItems.length > 0 : publicOverflowNavItems.length > 0) ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" className={navLinkClasses}>
+                    <ChevronDown className="h-4 w-4" />
+                    {isSystem ? 'More' : 'Explore'}
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className={isSystem ? 'border-slate-800 bg-slate-950 text-slate-100' : 'border-slate-200 bg-white text-slate-800'}>
+                  {(isSystem ? overflowSystemNavItems : publicOverflowNavItems).map((item) => (
+                    <DropdownMenuItem key={item.name} asChild className={isSystem ? 'focus:bg-slate-900 focus:text-white' : 'focus:bg-orange-50 focus:text-orange-700'}>
+                      {item.type === 'route' ? (
+                        <Link to={item.href} className="flex items-center gap-2">
+                          {'icon' in item && item.icon ? <item.icon className="h-4 w-4" /> : null}
+                          {item.name}
+                        </Link>
+                      ) : (
+                        <button onClick={() => handleNavClick(item)} className="flex w-full items-center gap-2">
+                          {'icon' in item && item.icon ? <item.icon className="h-4 w-4" /> : null}
+                          {item.name}
+                        </button>
+                      )}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : null}
             <Button 
               onClick={() => (isSystem ? (window.location.href = '/') : setIsDonationOpen(true))}
               className={utilityButtonClasses}

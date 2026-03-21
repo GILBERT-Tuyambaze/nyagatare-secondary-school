@@ -8,7 +8,8 @@ import { fetchAccessProfileUsers, seedFirestoreData } from '../lib/firestoreSeed
 
 export default function UsersPage() {
   const { accessProfile, user } = useAuth()
-  const [users, setUsers] = useState(systemUsers)
+  const previewUsers = accessProfile.role === 'SuperAdmin' ? systemUsers : systemUsers.filter((item) => !item.isProtected)
+  const [users, setUsers] = useState(previewUsers)
   const [loading, setLoading] = useState(true)
   const [seeding, setSeeding] = useState(false)
   const [message, setMessage] = useState('')
@@ -16,8 +17,10 @@ export default function UsersPage() {
   const loadUsers = async () => {
     setLoading(true)
     try {
-      const firestoreUsers = await fetchAccessProfileUsers()
-      setUsers(firestoreUsers.length ? firestoreUsers : systemUsers)
+      const firestoreUsers = await fetchAccessProfileUsers({
+        isSuperAdminViewer: accessProfile.role === 'SuperAdmin',
+      })
+      setUsers(firestoreUsers.length ? firestoreUsers : previewUsers)
       setMessage(
         firestoreUsers.length
           ? `Loaded ${firestoreUsers.length} access profile records from Firestore.`
@@ -25,7 +28,7 @@ export default function UsersPage() {
       )
     } catch (error) {
       console.error('Failed to load Firestore access profiles:', error)
-      setUsers(systemUsers)
+      setUsers(previewUsers)
       setMessage('Could not read Firestore yet. Showing local seed preview.')
     } finally {
       setLoading(false)
@@ -34,7 +37,7 @@ export default function UsersPage() {
 
   useEffect(() => {
     loadUsers()
-  }, [])
+  }, [accessProfile.role])
 
   const handleSeed = async () => {
     setSeeding(true)
@@ -92,7 +95,13 @@ export default function UsersPage() {
       </Card>
 
       <Card title="Users Table">
-        <UserTable users={users} />
+        <UserTable
+          users={users}
+          viewerRole={accessProfile.role}
+          viewerUid={user?.uid}
+          viewerEmail={user?.email}
+          onUsersChanged={loadUsers}
+        />
       </Card>
     </div>
   )

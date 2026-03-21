@@ -1,6 +1,7 @@
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { LogOut } from 'lucide-react'
+import { Link } from 'react-router-dom'
 import { AccessProfile } from '../types'
 
 export function Topbar({
@@ -26,6 +27,13 @@ export function Topbar({
           {profile.permissions.length} permissions
         </Badge>
         <Badge className="bg-white/10 text-white hover:bg-white/10">{profile.role}</Badge>
+        <Button
+          asChild
+          variant="outline"
+          className="border-slate-600 bg-slate-900/80 text-slate-100 hover:border-cyan-400/40 hover:bg-slate-800 hover:text-white"
+        >
+          <Link to="/system/profile">My Profile</Link>
+        </Button>
         <Button
           variant="outline"
           className="border-slate-600 bg-slate-900/80 text-slate-100 hover:border-cyan-400/40 hover:bg-slate-800 hover:text-white"

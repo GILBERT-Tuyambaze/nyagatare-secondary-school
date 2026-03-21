@@ -48,6 +48,29 @@ service cloud.firestore {
         ];
     }
 
+    function isProtectedAccessProfile() {
+      return resource.data.isProtected == true || resource.data.role == "SuperAdmin";
+    }
+
+    function selfProfileUpdateKeysAllowed() {
+      return request.resource.data.diff(resource.data).changedKeys().hasOnly([
+        "displayName",
+        "fullName",
+        "department",
+        "updated_at"
+      ]);
+    }
+
+    function leadershipUserUpdateKeysAllowed() {
+      return request.resource.data.diff(resource.data).changedKeys().hasOnly([
+        "displayName",
+        "fullName",
+        "department",
+        "status",
+        "updated_at"
+      ]);
+    }
+
     function canInviteRole(targetRole) {
       return isBootstrapAdmin()
         || isSuperAdmin()
@@ -124,7 +147,13 @@ service cloud.firestore {
     }
 
     match /access_profiles/{userId} {
-      allow read: if isSignedIn() && (request.auth.uid == userId || isSuperAdmin() || isBootstrapAdmin());
+      allow read: if isSignedIn()
+        && (
+          request.auth.uid == userId
+          || isSuperAdmin()
+          || isBootstrapAdmin()
+          || (!isProtectedAccessProfile() && isStaffViewer())
+        );
       allow create: if isSuperAdmin()
         || isBootstrapAdmin()
         || (
@@ -137,7 +166,37 @@ service cloud.firestore {
           && inviteDoc(request.resource.data.inviteToken).data.email == request.auth.token.email
           && request.resource.data.role == inviteDoc(request.resource.data.inviteToken).data.role
         );
-      allow update, delete: if isSuperAdmin() || isBootstrapAdmin();
+      allow update: if (
+          isSignedIn()
+          && request.auth.uid == userId
+          && (
+            ((isSuperAdmin() || isBootstrapAdmin()) && isProtectedAccessProfile())
+            || (
+              selfProfileUpdateKeysAllowed()
+              && request.resource.data.role == resource.data.role
+              && request.resource.data.email == resource.data.email
+              && request.resource.data.permissions == resource.data.permissions
+              && request.resource.data.isGhost == resource.data.isGhost
+              && request.resource.data.isProtected == resource.data.isProtected
+            )
+          )
+        )
+        || (
+          (isSuperAdmin() || isBootstrapAdmin())
+          && !isProtectedAccessProfile()
+        )
+        || (
+          hasRole("Headmaster")
+          && !isProtectedAccessProfile()
+          && leadershipUserUpdateKeysAllowed()
+          && request.resource.data.role == resource.data.role
+          && request.resource.data.email == resource.data.email
+          && request.resource.data.permissions == resource.data.permissions
+          && request.resource.data.isGhost == resource.data.isGhost
+          && request.resource.data.isProtected == resource.data.isProtected
+        );
+      allow delete: if !isProtectedAccessProfile()
+        && (isSuperAdmin() || isBootstrapAdmin() || hasRole("Headmaster"));
     }
 
     match /students/{studentId} {
@@ -162,6 +221,11 @@ service cloud.firestore {
     }
 
     match /events/{eventId} {
+      allow read: if true;
+      allow create, update, delete: if isSuperAdmin() || isStaffViewer() || isBootstrapAdmin();
+    }
+
+    match /content_posts/{postId} {
       allow read: if true;
       allow create, update, delete: if isSuperAdmin() || isStaffViewer() || isBootstrapAdmin();
     }
@@ -248,6 +312,75 @@ service cloud.firestore {
     match /class_posts/{postId} {
       allow read: if isSignedIn();
       allow create, update, delete: if isSuperAdmin() || isBootstrapAdmin() || hasRole("Headmaster") || hasRole("DOS") || hasRole("Teacher") || hasRole("HOD");
+    }
+
+    match /subjects/{subjectId} {
+      allow read: if isSignedIn();
+      allow create, update, delete: if isSuperAdmin() || isBootstrapAdmin() || hasRole("Headmaster") || hasRole("DOS") || hasRole("HOD");
+    }
+
+    match /class_teacher_assignments/{assignmentId} {
+      allow read: if isSignedIn();
+      allow create, update, delete: if isSuperAdmin() || isBootstrapAdmin() || hasRole("Headmaster") || hasRole("DOS") || hasRole("HOD");
+    }
+
+    match /learning_resources/{resourceId} {
+      allow read: if isSignedIn();
+      allow create, update, delete: if isSuperAdmin()
+        || isBootstrapAdmin()
+        || hasRole("Headmaster")
+        || hasRole("DOS")
+        || hasRole("HOD")
+        || hasRole("Teacher");
+    }
+
+    match /student_marks/{markId} {
+      allow read: if isSignedIn();
+      allow create, update, delete: if isSuperAdmin()
+        || isBootstrapAdmin()
+        || hasRole("Headmaster")
+        || hasRole("DOS")
+        || hasRole("HOD")
+        || hasRole("Teacher");
+    }
+
+    match /mark_comments/{commentId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn();
+      allow update, delete: if isSuperAdmin()
+        || isBootstrapAdmin()
+        || hasRole("Headmaster")
+        || hasRole("DOS")
+        || hasRole("HOD")
+        || hasRole("Teacher");
+    }
+
+    match /chat_threads/{threadId} {
+      allow read: if isSignedIn();
+      allow create, update, delete: if isSignedIn();
+    }
+
+    match /chat_messages/{messageId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn();
+      allow update, delete: if isSuperAdmin() || isBootstrapAdmin();
+    }
+
+    match /discipline_cases/{caseId} {
+      allow read: if isSignedIn();
+      allow create, update, delete: if isSuperAdmin()
+        || isBootstrapAdmin()
+        || hasRole("Headmaster")
+        || hasRole("DOS")
+        || hasRole("DOD")
+        || hasRole("HOD")
+        || hasRole("Teacher");
+    }
+
+    match /activity_logs/{logId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn();
+      allow update, delete: if isSuperAdmin() || isBootstrapAdmin();
     }
   }
 }

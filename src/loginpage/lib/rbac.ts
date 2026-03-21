@@ -2,12 +2,12 @@ import { AccessProfile, Permission, Role, RoleDefinition } from '../types'
 
 export const rolePermissions: Record<Role, Permission[]> = {
   SuperAdmin: ['manage_users', 'assign_roles', 'view_reports', 'upload_marks', 'view_marks', 'manage_content', 'publish_news', 'manage_discipline', 'manage_finance'],
-  Headmaster: ['view_reports', 'assign_roles', 'manage_users', 'publish_news'],
+  Headmaster: ['manage_users', 'assign_roles', 'view_reports', 'upload_marks', 'view_marks', 'manage_content', 'publish_news', 'manage_discipline', 'manage_finance'],
   AdmissionsOfficer: ['view_reports', 'manage_users'],
-  DOS: ['upload_marks', 'view_reports'],
+  DOS: ['manage_users', 'assign_roles', 'view_reports', 'upload_marks', 'view_marks', 'manage_content', 'publish_news'],
   DOD: ['view_reports', 'manage_discipline'],
   Bursar: ['view_reports', 'manage_finance'],
-  HOD: ['upload_marks', 'view_reports'],
+  HOD: ['manage_users', 'assign_roles', 'view_reports', 'upload_marks', 'view_marks'],
   Teacher: ['upload_marks', 'view_marks'],
   Student: ['view_marks'],
   StudentLeader: ['view_marks', 'view_reports'],
@@ -22,12 +22,12 @@ export const rolePermissions: Record<Role, Permission[]> = {
 
 export const roleDefinitions: RoleDefinition[] = [
   { role: 'SuperAdmin', description: 'Full platform control with unrestricted access to users, roles, reports, academics, content, discipline, and finance.', permissions: rolePermissions.SuperAdmin },
-  { role: 'Headmaster', description: 'School-wide leadership access across strategic modules and reports.', permissions: rolePermissions.Headmaster },
+  { role: 'Headmaster', description: 'School-wide leadership access aligned with admin-level oversight across operations, academics, content, discipline, and finance.', permissions: rolePermissions.Headmaster },
   { role: 'AdmissionsOfficer', description: 'Admissions operations role for applications, applicant follow-up, and enrollment coordination.', permissions: rolePermissions.AdmissionsOfficer },
-  { role: 'DOS', description: 'Academic coordination with marks and report visibility.', permissions: rolePermissions.DOS },
+  { role: 'DOS', description: 'Director of Studies access across academic coordination, learning delivery, class assignments, and teaching oversight.', permissions: rolePermissions.DOS },
   { role: 'DOD', description: 'Discipline oversight and institutional case management.', permissions: rolePermissions.DOD },
   { role: 'Bursar', description: 'Financial management and reporting visibility.', permissions: rolePermissions.Bursar },
-  { role: 'HOD', description: 'Department-level academic leadership and marks oversight.', permissions: rolePermissions.HOD },
+  { role: 'HOD', description: 'Minimum leadership-admin layer for department operations, user coordination, and academic oversight.', permissions: rolePermissions.HOD },
   { role: 'Teacher', description: 'Marks entry and academic visibility for classroom workflows.', permissions: rolePermissions.Teacher },
   { role: 'Student', description: 'Student-facing access for permitted academic information.', permissions: rolePermissions.Student },
   { role: 'StudentLeader', description: 'Student leadership role with limited reporting visibility.', permissions: rolePermissions.StudentLeader },

@@ -29,6 +29,10 @@ export interface Application {
   guardian_email?: string
   guardian_occupation?: string
   emergency_contact?: string
+  urubuto_id?: string
+  sdms_code?: string
+  report_link?: string
+  report_file_name?: string
   previous_school: string
   applying_grade: string
   academic_year: string
@@ -84,6 +88,150 @@ export interface Donation {
   is_anonymous: boolean
   created_at: string
   updated_at: string
+}
+
+export interface NewsletterSubscriber {
+  id: string
+  email: string
+  source: 'footer' | 'events'
+  source_label: 'Homepage Footer' | 'Events Page'
+  sources?: Array<'footer' | 'events'>
+  status?: 'subscribed' | 'unsubscribed'
+  unsubscribed_at?: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface ContentPost {
+  id: string
+  title: string
+  slug: string
+  type: 'news' | 'blog' | 'announcement'
+  status: 'draft' | 'review' | 'published'
+  excerpt?: string
+  body: string
+  featured_image?: string
+  author_name?: string
+  published_at?: string
+  created_at: string
+  updated_at: string
+}
+
+export interface SchoolSubject {
+  id: string
+  name: string
+  code: string
+  department: string
+  created_at: string
+  updated_at: string
+}
+
+export interface ClassTeacherAssignment {
+  id: string
+  class_id: string
+  teacher_user_id: string
+  teacher_name: string
+  subject_id: string
+  subject_name: string
+  academic_year: string
+  term: string
+  can_invite_students: boolean
+  can_invite_parents: boolean
+  can_change_class: boolean
+  created_at: string
+  updated_at: string
+}
+
+export interface LearningResource {
+  id: string
+  class_id: string
+  subject_id?: string
+  subject_name?: string
+  teacher_user_id: string
+  teacher_name: string
+  type: 'assignment' | 'exercise' | 'holiday_package' | 'notes' | 'material'
+  title: string
+  description: string
+  attachment_url?: string
+  due_date?: string
+  created_at: string
+  updated_at: string
+}
+
+export interface StudentMark {
+  id: string
+  class_id: string
+  student_id: string
+  student_name: string
+  subject_id: string
+  subject_name: string
+  teacher_user_id: string
+  teacher_name: string
+  score: number
+  max_score: number
+  term: string
+  academic_year: string
+  comment?: string
+  created_at: string
+  updated_at: string
+}
+
+export interface MarkComment {
+  id: string
+  mark_id: string
+  student_id: string
+  student_name: string
+  message: string
+  created_at: string
+}
+
+export interface ChatThread {
+  id: string
+  class_id: string
+  type: 'common' | 'private_subject'
+  title: string
+  subject_id?: string
+  subject_name?: string
+  student_id?: string
+  teacher_user_id?: string
+  created_at: string
+  updated_at: string
+}
+
+export interface ChatMessage {
+  id: string
+  thread_id: string
+  sender_uid: string
+  sender_name: string
+  sender_role: string
+  message: string
+  is_ghost?: boolean
+  created_at: string
+}
+
+export interface DisciplineCase {
+  id: string
+  class_id?: string
+  student_id: string
+  student_name: string
+  title: string
+  summary: string
+  status: 'warning' | 'monitoring' | 'resolved'
+  staff_comment?: string
+  created_at: string
+  updated_at: string
+}
+
+export interface ActivityLog {
+  id: string
+  action: string
+  actor_uid?: string
+  actor_name: string
+  actor_role?: string
+  target_type: string
+  target_id: string
+  summary: string
+  created_at: string
 }
 
 export interface BoardMember {

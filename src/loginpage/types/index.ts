@@ -31,8 +31,13 @@ export type Permission =
 export interface AccessProfile {
   email: string | null
   displayName: string
+  fullName?: string
   role: Role
   permissions: Permission[]
+  department?: string
+  status?: 'active' | 'invited' | 'suspended'
+  isGhost?: boolean
+  isProtected?: boolean
 }
 
 export interface SystemUser {
@@ -43,6 +48,8 @@ export interface SystemUser {
   permissions: Permission[]
   status: 'active' | 'invited' | 'suspended'
   department: string
+  isGhost?: boolean
+  isProtected?: boolean
 }
 
 export interface RoleDefinition {

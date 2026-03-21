@@ -7,12 +7,16 @@ import { Topbar } from './Topbar'
 
 const pageCopy: Record<string, { title: string; description: string }> = {
   '/system': {
-    title: 'Dashboard Landing',
-    description: 'A secure overview of the RBAC workspace and the modules your role can access.',
+    title: 'System Home',
+    description: 'A role-aware starting point for school operations, class work, and secure module access.',
   },
   '/system/users': {
     title: 'User Management',
     description: 'Inspect users, departments, status, and role-based access assignments.',
+  },
+  '/system/profile': {
+    title: 'My Profile',
+    description: 'Update your own profile details, department, and password from one protected workspace.',
   },
   '/system/applications': {
     title: 'Admissions Workspace',
@@ -35,8 +39,12 @@ const pageCopy: Record<string, { title: string; description: string }> = {
     description: 'Review the current role model and the permission coverage attached to each role.',
   },
   '/system/academics': {
-    title: 'Academics Management',
-    description: 'Track department performance and instructional readiness.',
+    title: 'Classes and Academics',
+    description: 'Open class spaces, learning resources, marks, messaging, and academic delivery tools.',
+  },
+  '/system/class-operations': {
+    title: 'Class Operations',
+    description: 'Create classes, assign teachers, place students, and coordinate leadership actions across the class system.',
   },
   '/system/content': {
     title: 'Content Manager',
