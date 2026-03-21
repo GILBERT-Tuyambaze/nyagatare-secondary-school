@@ -208,7 +208,7 @@ export default function ProfilePage() {
           <div className="rounded-2xl border border-slate-800 bg-slate-900/70 p-4">
             <p className="font-medium text-white">Leadership access</p>
             <p className="mt-2">
-              Headmaster and superadmin can manage non-protected access profiles in the users workspace. Protected ghost accounts stay out of normal editing and deletion flows.
+              Headmaster and superadmin can manage non-protected access profiles in the users workspace. Protected Digital Operations stay out of normal editing and deletion flows.
             </p>
           </div>
           <div className="rounded-2xl border border-cyan-500/20 bg-cyan-500/10 p-4 text-cyan-100">
