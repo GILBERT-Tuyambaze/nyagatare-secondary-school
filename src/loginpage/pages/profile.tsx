@@ -190,7 +190,7 @@ export default function ProfilePage() {
 
       <Card
         title="Security and Visibility"
-        description="Protected rules for account safety, leadership workflows, and the single ghost superadmin."
+        description="Protected rules for account safety, leadership workflows, and the Digital Operations."
       >
         <div className="space-y-4 text-sm text-slate-300">
           <div className="rounded-2xl border border-slate-800 bg-slate-900/70 p-4">
@@ -212,9 +212,9 @@ export default function ProfilePage() {
             </p>
           </div>
           <div className="rounded-2xl border border-cyan-500/20 bg-cyan-500/10 p-4 text-cyan-100">
-            <p className="font-medium text-white">Ghost superadmin</p>
+            <p className="font-medium text-white">Digital Operations</p>
             <p className="mt-2">
-              The single superadmin account stays protected and can only adjust its own profile from this page.
+              The Digital Operations account stays protected and can only adjust its own profile from this page.
             </p>
           </div>
         </div>
