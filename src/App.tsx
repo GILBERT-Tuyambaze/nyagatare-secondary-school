@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Suspense, lazy, useEffect } from 'react';
 import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { AuthProvider } from '@/contexts/AuthContext';
+import PublicAiAssistant from '@/components/PublicAiAssistant';
 import AdminRoute from './components/AdminRoute';
 import { PermissionGate } from '@/loginpage/components/PermissionGate';
 import { RoleGate } from '@/loginpage/components/RoleGate';
@@ -24,6 +25,7 @@ const UsersPage = lazy(() => import('@/loginpage/pages/users'));
 const RolesPage = lazy(() => import('@/loginpage/pages/roles'));
 const AcademicsPage = lazy(() => import('@/loginpage/pages/academics'));
 const ClassOperationsPage = lazy(() => import('@/loginpage/pages/class-operations'));
+const TimetablePage = lazy(() => import('@/loginpage/pages/timetable'));
 const ContentPage = lazy(() => import('@/loginpage/pages/content'));
 const DisciplinePage = lazy(() => import('@/loginpage/pages/discipline'));
 const FinancePage = lazy(() => import('@/loginpage/pages/finance'));
@@ -32,6 +34,7 @@ const InviteSignupPage = lazy(() => import('@/loginpage/pages/invite-signup'));
 const StudentDashboardPage = lazy(() => import('@/loginpage/pages/student-dashboard'));
 const ControlCenterPage = lazy(() => import('@/loginpage/pages/control-center'));
 const AiHubPage = lazy(() => import('@/loginpage/pages/ai-hub'));
+const GilbertPage = lazy(() => import('@/loginpage/pages/gilbert'));
 const ProfilePage = lazy(() => import('@/loginpage/pages/profile'));
 
 const queryClient = new QueryClient();
@@ -79,6 +82,7 @@ const App = () => (
         <Toaster />
         <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
           <ScrollManager />
+          <PublicAiAssistant />
           <Suspense fallback={<RouteLoader />}>
             <Routes>
               <Route path="/" element={<Index />} />
@@ -98,15 +102,17 @@ const App = () => (
                 <Route path="student-dashboard" element={<PermissionGate permission="view_marks"><StudentDashboardPage /></PermissionGate>} />
                 <Route path="control-center" element={<PermissionGate permission="view_reports"><ControlCenterPage /></PermissionGate>} />
                 <Route path="ai-hub" element={<PermissionGate permission="view_reports"><AiHubPage /></PermissionGate>} />
+                <Route path="gilbert" element={<PermissionGate permission="view_reports"><GilbertPage /></PermissionGate>} />
                 <Route path="profile" element={<ProfilePage />} />
                 <Route path="users" element={<PermissionGate permission="manage_users"><UsersPage /></PermissionGate>} />
                 <Route path="roles" element={<PermissionGate permission="assign_roles"><RolesPage /></PermissionGate>} />
                 <Route path="academics" element={<PermissionGate permission="view_marks"><AcademicsPage /></PermissionGate>} />
                 <Route path="class-operations" element={<RoleGate roles={['SuperAdmin', 'Headmaster', 'DOS', 'HOD', 'DOD']}><ClassOperationsPage /></RoleGate>} />
+                <Route path="timetable" element={<RoleGate roles={['SuperAdmin', 'Headmaster', 'DOS', 'HOD', 'DOD']}><TimetablePage /></RoleGate>} />
                 <Route path="content" element={<RoleGate roles={['SuperAdmin', 'Headmaster', 'ContentManager', 'DOS', 'DOD', 'HOD']}><ContentPage /></RoleGate>} />
                 <Route path="discipline" element={<PermissionGate permission="manage_discipline"><DisciplinePage /></PermissionGate>} />
                 <Route path="finance" element={<PermissionGate permission="manage_finance"><FinancePage /></PermissionGate>} />
-                <Route path="invite" element={<PermissionGate permission="assign_roles"><InvitePage /></PermissionGate>} />
+                <Route path="invite" element={<RoleGate roles={['SuperAdmin', 'Headmaster', 'AdmissionsOfficer', 'DOS', 'DOD', 'Bursar', 'HOD', 'Teacher', 'Student', 'StudentLeader', 'Animator', 'Animatress', 'ParentLeader', 'ContentManager']}><InvitePage /></RoleGate>} />
               </Route>
               <Route path="/admin" element={<LegacyAdminRedirect />} />
               <Route path="/admin/board-management" element={<LegacyBoardManagementRedirect />} />

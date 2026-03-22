@@ -99,7 +99,7 @@ export function UserTable({
 
     setSelectedUserId(selectedUser.id)
     setFormState(buildFormState(selectedUser))
-  }, [selectedUser?.id])
+  }, [selectedUser])
 
   const handleSave = async () => {
     if (!selectedUser || !formState || !canEditSelected) {

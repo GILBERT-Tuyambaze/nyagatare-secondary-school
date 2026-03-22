@@ -107,6 +107,34 @@ export interface NewsletterSubscriber {
   updated_at: string
 }
 
+export interface PublicAiAssistantSettings {
+  id: string
+  enabled: boolean
+  hidden_message?: string
+  updated_at: string
+  updated_by?: string
+  updated_by_role?: string
+}
+
+export interface PublicAiConversationSummary {
+  id: string
+  session_id: string
+  visitor_name: string
+  visitor_email: string
+  visitor_uid?: string
+  visitor_role?: string
+  visitor_is_ghost?: boolean
+  source_page: string
+  message_count: number
+  last_user_message?: string
+  last_assistant_message?: string
+  summary: string
+  status: 'active' | 'closed'
+  started_at: string
+  created_at: string
+  updated_at: string
+}
+
 export interface ContentMediaItem {
   id: string
   type: 'image' | 'video'
@@ -140,6 +168,89 @@ export interface SchoolSubject {
   name: string
   code: string
   department: string
+  created_at: string
+  updated_at: string
+}
+
+export interface SchoolDayStructure {
+  id: string
+  label: string
+  start_time: string
+  end_time: string
+  period_length_minutes: number
+  periods_per_day: number
+  morning_break_start?: string
+  morning_break_end?: string
+  lunch_start?: string
+  lunch_end?: string
+  working_days: string[]
+  created_at: string
+  updated_at: string
+}
+
+export interface TimetableSubjectRequirement {
+  id: string
+  class_id: string
+  class_name: string
+  subject_id: string
+  subject_name: string
+  priority: 'core' | 'light'
+  period_pattern: 'single' | 'double' | 'triple'
+  weekly_periods: number
+  preferred_session: 'morning' | 'afternoon' | 'any'
+  assigned_teacher_user_id?: string
+  assigned_teacher_name?: string
+  academic_year: string
+  term: string
+  created_at: string
+  updated_at: string
+}
+
+export interface TeacherTimetableSetting {
+  id: string
+  teacher_user_id: string
+  teacher_name: string
+  subjects_can_teach?: string[]
+  max_classes?: number
+  max_periods_per_day: number
+  min_periods_per_week?: number
+  available_days?: string[]
+  created_at: string
+  updated_at: string
+}
+
+export interface TimetableEntry {
+  id: string
+  class_id: string
+  class_name: string
+  day: string
+  period_number: number
+  subject_id: string
+  subject_name: string
+  teacher_user_id: string
+  teacher_name: string
+  academic_year: string
+  term: string
+  sequence_group?: string
+  generated_by?: string
+  generated_at?: string
+  created_at: string
+  updated_at: string
+}
+
+export interface TimetableDraft {
+  id: string
+  academic_year: string
+  term: string
+  status: 'pending_approval' | 'approved'
+  generation_mode: 'rules' | 'ai'
+  generated_by: string
+  generated_at: string
+  approved_by?: string
+  approved_at?: string
+  conflict_notes: string[]
+  ai_notes?: string[]
+  entries: Array<Omit<TimetableEntry, 'id' | 'created_at' | 'updated_at'>>
   created_at: string
   updated_at: string
 }

@@ -44,6 +44,27 @@ export default defineConfig(({ command, mode }) => {
                 const buffer = Buffer.from(await response.arrayBuffer());
                 res.end(buffer);
               });
+              server.middlewares.use("/api/public-ai", async (req, res) => {
+                const { handlePublicAiRequest } = await import("./server/public-ai.js");
+                const url = new URL(req.url || "/api/public-ai", "http://localhost");
+                const request = new Request(url.toString(), {
+                  method: req.method,
+                  headers: req.headers as HeadersInit,
+                  body:
+                    req.method && req.method !== "GET" && req.method !== "HEAD"
+                      ? req
+                      : undefined,
+                  duplex: "half",
+                } as RequestInit);
+
+                const response = await handlePublicAiRequest(request);
+                res.statusCode = response.status;
+                response.headers.forEach((value, key) => {
+                  res.setHeader(key, value);
+                });
+                const buffer = Buffer.from(await response.arrayBuffer());
+                res.end(buffer);
+              });
               server.middlewares.use("/api/invite-email", async (req, res) => {
                 const { handleInviteEmailRequest } = await import("./server/invite-email.js");
                 const url = new URL(req.url || "/api/invite-email", "http://localhost");

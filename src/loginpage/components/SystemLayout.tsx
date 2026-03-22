@@ -31,8 +31,12 @@ const pageCopy: Record<string, { title: string; description: string }> = {
     description: 'A leadership and operations hub for coordinated school management.',
   },
   '/system/ai-hub': {
-    title: 'AI Chatbot + Analytics Hub',
-    description: 'Conversational support plus insight cards for school decision-making.',
+    title: 'AI Hub',
+    description: 'Internal system AI for staff prompts, analysis, and operational support.',
+  },
+  '/system/gilbert': {
+    title: 'GILBERT',
+    description: 'Review the public website assistant, its visibility, and visitor conversation summaries.',
   },
   '/system/roles': {
     title: 'Roles & Permissions',
@@ -45,6 +49,10 @@ const pageCopy: Record<string, { title: string; description: string }> = {
   '/system/class-operations': {
     title: 'Class Operations',
     description: 'Create classes, assign teachers, place students, and coordinate leadership actions across the class system.',
+  },
+  '/system/timetable': {
+    title: 'Timetable Studio',
+    description: 'Build, validate, and export the school timetable with DOS-led workflow and teacher conflict prevention.',
   },
   '/system/content': {
     title: 'Content Manager',
@@ -59,8 +67,8 @@ const pageCopy: Record<string, { title: string; description: string }> = {
     description: 'Review bursar-oriented indicators and finance health snapshots.',
   },
   '/system/invite': {
-    title: 'Invite Signup',
-    description: 'Create one-time role-based invitations for new users.',
+    title: 'Invite Center',
+    description: 'Create one-time invitations, including parent-to-student links and role-based onboarding.',
   },
 }
 

@@ -3,8 +3,8 @@ import { AlertTriangle, BookOpen, CalendarDays, CheckCircle2, ClipboardList, Dol
 import { Badge } from '@/components/ui/badge'
 import { Link } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
-import { getAccessProfiles, getActivityLogs, getApplications, getClasses, getClassStudents, getClassTeacherAssignments, getContentPosts, getDonations, getEvents, getInvites, getLearningResources, getStudentMarks, getStudents } from '@/services/firestoreService'
-import { ActivityLog, Application, ClassTeacherAssignment, ContentPost, Donation, Event, LearningResource, Student, StudentMark } from '@/types/database'
+import { getAccessProfiles, getActivityLogs, getApplications, getClasses, getClassStudents, getClassTeacherAssignments, getContentPosts, getDonations, getEvents, getInvites, getLearningResources, getStudentMarks, getStudents, getTimetableEntries } from '@/services/firestoreService'
+import { ActivityLog, Application, ClassTeacherAssignment, ContentPost, Donation, Event, LearningResource, Student, StudentMark, TimetableEntry } from '@/types/database'
 import { Card } from '../components/Card'
 import { SuperAdminAlerts } from '../components/SuperAdminAlerts'
 import { SuperAdminFutureModules } from '../components/SuperAdminFutureModules'
@@ -42,13 +42,14 @@ export default function SystemIndexPage() {
   const [resources, setResources] = useState<LearningResource[]>([])
   const [marks, setMarks] = useState<StudentMark[]>([])
   const [activityLogs, setActivityLogs] = useState<ActivityLog[]>([])
+  const [timetableEntries, setTimetableEntries] = useState<TimetableEntry[]>([])
 
   useEffect(() => {
     if (!needsRoleAwareOverview) return
 
     const loadOverview = async () => {
       try {
-        const [userData, applicationData, eventData, donationData, classData, contentData, inviteData, studentData, classStudentData, assignmentData, resourceData, markData, activityData] = await Promise.all([
+        const [userData, applicationData, eventData, donationData, classData, contentData, inviteData, studentData, classStudentData, assignmentData, resourceData, markData, activityData, timetableData] = await Promise.all([
           getAccessProfiles(),
           getApplications(),
           getEvents(),
@@ -62,6 +63,7 @@ export default function SystemIndexPage() {
           getLearningResources(),
           getStudentMarks(),
           getActivityLogs(),
+          getTimetableEntries(),
         ])
 
         setUsers(userData)
@@ -77,6 +79,7 @@ export default function SystemIndexPage() {
         setResources(resourceData)
         setMarks(markData)
         setActivityLogs(activityData)
+        setTimetableEntries(timetableData)
       } catch (error) {
         console.error('Failed to load role-aware overview:', error)
       }
@@ -259,6 +262,10 @@ export default function SystemIndexPage() {
   const teacherActivity = activityLogs.filter(
     (item) => item.actor_uid === currentProfileUser?.id || item.actor_name.toLowerCase() === accessProfile.displayName.toLowerCase()
   )
+  const timetableClassesCovered = new Set(timetableEntries.map((entry) => entry.class_id)).size
+  const timetableTeachersScheduled = new Set(timetableEntries.map((entry) => entry.teacher_user_id)).size
+  const timetableDaysCovered = new Set(timetableEntries.map((entry) => entry.day)).size
+  const teacherTimetableEntries = timetableEntries.filter((entry) => entry.teacher_user_id === currentProfileUser?.id)
   const currentStudent = students.find((student) => student.email?.toLowerCase() === accessProfile.email?.toLowerCase())
   const studentMembership = classStudents.find((membership) => membership.student_id === currentStudent?.id)
   const studentClass = classes.find((classroom) => classroom.id === studentMembership?.class_id)
@@ -322,6 +329,12 @@ export default function SystemIndexPage() {
       note: 'Materials, news, or updates still waiting before publication.',
       icon: Mail,
     },
+    {
+      label: 'Timetable Coverage',
+      value: `${timetableClassesCovered}/${classes.length || 0}`,
+      note: 'Classes that already have published timetable periods saved.',
+      icon: CalendarDays,
+    },
   ]
 
   const hodStats = [
@@ -361,6 +374,7 @@ export default function SystemIndexPage() {
   const dosActions = [
     { label: 'Open Academic Command Center', to: '/system/academics', detail: 'Lead classes, learning resources, marks, and subject-level delivery.', icon: GraduationCap },
     { label: 'Coordinate Class Operations', to: '/system/class-operations', detail: 'Assign teachers, align class teacher roles, and place learners properly.', icon: BookOpen },
+    { label: 'Open Timetable Studio', to: '/system/timetable', detail: 'Generate, validate, and export the school timetable with teacher-conflict prevention.', icon: CalendarDays },
     { label: 'Review Academic Admissions', to: '/system/applications', detail: 'Follow applicant readiness and academic placement needs.', icon: ClipboardList },
     { label: 'Use AI Academic Support', to: '/system/ai-hub', detail: 'Ask for insight on learning pressure, content backlog, and academic patterns.', icon: LayoutDashboard },
   ]
@@ -424,9 +438,9 @@ export default function SystemIndexPage() {
         ...classes.slice(0, 4).map((classroom) => ({
           id: `dos-class-${classroom.id}`,
           title: classroom.name,
-          detail: `${classroom.department} class space is active in the learning system.`,
+          detail: `${classroom.department} class space is active in the learning system${timetableEntries.some((entry) => entry.class_id === classroom.id) ? ' with timetable coverage.' : ' and still needs timetable coverage.'}`,
           to: '/system/class-operations',
-          badge: 'class',
+          badge: timetableEntries.some((entry) => entry.class_id === classroom.id) ? 'scheduled' : 'needs schedule',
         })),
       ].slice(0, 6),
     },
@@ -441,6 +455,34 @@ export default function SystemIndexPage() {
         to: '/system/content',
         badge: post.status,
       })),
+    },
+    {
+      title: 'Timetable Coordination',
+      description: 'Scheduling readiness signals that help the DOS keep class delivery conflict-free.',
+      emptyMessage: 'Timetable entries will appear here once schedules are generated.',
+      items: [
+        {
+          id: 'dos-timetable-coverage',
+          title: 'Published Timetable Coverage',
+          detail: `${timetableClassesCovered} of ${classes.length || 0} classes already have timetable periods saved.`,
+          to: '/system/timetable',
+          badge: `${timetableEntries.length} periods`,
+        },
+        {
+          id: 'dos-timetable-teachers',
+          title: 'Teachers Already Scheduled',
+          detail: `${timetableTeachersScheduled} teachers are currently attached to active timetable entries.`,
+          to: '/system/timetable',
+          badge: 'teacher load',
+        },
+        {
+          id: 'dos-timetable-days',
+          title: 'School Days Covered',
+          detail: `${timetableDaysCovered} day bands are currently represented in the published schedule.`,
+          to: '/system/timetable',
+          badge: 'day spread',
+        },
+      ],
     },
   ]
 
@@ -505,11 +547,18 @@ export default function SystemIndexPage() {
       note: 'Logged actions tied to marks, messages, and classroom delivery.',
       icon: MessageSquare,
     },
+    {
+      label: 'Scheduled Periods',
+      value: teacherTimetableEntries.length,
+      note: 'Published timetable periods already assigned to this teacher.',
+      icon: CalendarDays,
+    },
   ]
 
   const teacherActions = [
     { label: 'Open Teaching Workspace', to: '/system/academics', detail: 'Go straight to assigned classes, learning resources, marks, and chats.', icon: GraduationCap },
     { label: 'Review Class Operations', to: '/system/class-operations', detail: 'See how class assignments and learner placement are being managed.', icon: BookOpen },
+    { label: 'Open My Timetable', to: '/system/academics', detail: 'Review the timetable tab to see your weekly teaching schedule.', icon: CalendarDays },
     { label: 'Check Student Dashboard View', to: '/system/student-dashboard', detail: 'Understand the learner-facing view that students are working with.', icon: LayoutDashboard },
     { label: 'Use AI Support', to: '/system/ai-hub', detail: 'Get quick academic insight and operational support while teaching.', icon: MessageSquare },
   ]

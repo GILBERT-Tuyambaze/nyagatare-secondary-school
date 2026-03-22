@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { useAuth } from '@/contexts/AuthContext'
 import { Card } from '../components/Card'
@@ -12,7 +12,7 @@ export default function UsersPage() {
   const [loading, setLoading] = useState(true)
   const [message, setMessage] = useState('')
 
-  const loadUsers = async () => {
+  const loadUsers = useCallback(async () => {
     setLoading(true)
     try {
       const firestoreUsers = await fetchAccessProfileUsers({
@@ -31,11 +31,11 @@ export default function UsersPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [accessProfile.role])
 
   useEffect(() => {
-    loadUsers()
-  }, [accessProfile.role])
+    void loadUsers()
+  }, [loadUsers])
 
   return (
     <div className="space-y-6">

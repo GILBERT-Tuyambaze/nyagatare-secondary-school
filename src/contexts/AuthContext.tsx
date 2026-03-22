@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useEffect, useState } from 'react'
+/* eslint-disable react-refresh/only-export-components */
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
 import {
   EmailAuthProvider,
   User,
@@ -53,21 +54,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [accessProfile, setAccessProfile] = useState<AccessProfile>(buildAccessProfile(null, []))
   const [loading, setLoading] = useState(true)
 
-  const adminEmails = (import.meta.env.VITE_ADMIN_EMAILS as string | undefined)
-    ?.split(',')
-    .map((email) => email.trim().toLowerCase())
-    .filter(Boolean) ?? []
+  const adminEmails = useMemo(
+    () =>
+      (import.meta.env.VITE_ADMIN_EMAILS as string | undefined)
+        ?.split(',')
+        .map((email) => email.trim().toLowerCase())
+        .filter(Boolean) ?? [],
+    []
+  )
 
   const exactSuperAdminEmail = 'gilberttuyambaze00@gmail.com'
 
-  const formatDisplayName = (email: string | null, fallback?: string | null) => {
+  const formatDisplayName = useCallback((email: string | null, fallback?: string | null) => {
     if (fallback?.trim()) return fallback.trim()
     if (!email) return 'Guest User'
     const localPart = email.split('@')[0].replace(/[._-]+/g, ' ')
     return localPart.replace(/\b\w/g, (character) => character.toUpperCase())
-  }
+  }, [])
 
-  const buildSignedInFallbackProfile = (nextUser: User) => {
+  const buildSignedInFallbackProfile = useCallback((nextUser: User) => {
     const normalizedEmail = nextUser.email?.toLowerCase() ?? ''
     const isKnownSuperAdmin = normalizedEmail === exactSuperAdminEmail || adminEmails.includes(normalizedEmail)
 
@@ -94,9 +99,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       isGhost: false,
       isProtected: false,
     }
-  }
+  }, [adminEmails, formatDisplayName])
 
-  const loadAccessProfile = async (nextUser: User | null) => {
+  const loadAccessProfile = useCallback(async (nextUser: User | null) => {
     if (!nextUser) {
       return buildAccessProfile(null, adminEmails)
     }
@@ -129,17 +134,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         status: data.status || fallbackProfile.status,
         isGhost: Boolean(data.isGhost ?? fallbackProfile.isGhost),
         isProtected: Boolean(data.isProtected ?? fallbackProfile.isProtected),
+        linkedStudentIds: Array.isArray((data as AccessProfile).linkedStudentIds)
+          ? (data as AccessProfile).linkedStudentIds
+          : fallbackProfile.linkedStudentIds,
+        linkedStudentNames: Array.isArray((data as AccessProfile).linkedStudentNames)
+          ? (data as AccessProfile).linkedStudentNames
+          : fallbackProfile.linkedStudentNames,
       }
     } catch (error) {
       console.error('Failed to load access profile from Firestore:', error)
       return fallbackProfile
     }
-  }
+  }, [adminEmails, buildSignedInFallbackProfile])
 
-  const refreshAccessProfile = async () => {
+  const refreshAccessProfile = useCallback(async () => {
     const profile = await loadAccessProfile(auth.currentUser)
     setAccessProfile(profile)
-  }
+  }, [loadAccessProfile])
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (nextUser) => {
@@ -150,7 +161,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     })
 
     return unsubscribe
-  }, [])
+  }, [refreshAccessProfile])
 
   const signIn = async (email: string, password: string) => {
     try {

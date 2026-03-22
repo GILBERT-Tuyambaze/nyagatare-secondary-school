@@ -15,11 +15,18 @@ import {
   LearningResource,
   MarkComment,
   NewsletterSubscriber,
+  PublicAiAssistantSettings,
+  PublicAiConversationSummary,
   SchoolSubject,
+  SchoolDayStructure,
   Student,
   StudentMark,
+  TeacherTimetableSetting,
+  TimetableDraft,
+  TimetableEntry,
+  TimetableSubjectRequirement,
 } from '../types/database'
-import { ClassPost, Classroom, ClassStudent, Invite, Role, SystemUser } from '../loginpage/types'
+import { ClassPost, Classroom, ClassStudent, Invite, ParentRelationshipType, Role, SystemUser } from '../loginpage/types'
 import { rolePermissions } from '../loginpage/lib/rbac'
 
 type FirestoreEntity = {
@@ -42,6 +49,10 @@ const removeUndefined = <T extends Record<string, unknown>>(value: T): T =>
 
 const sortByString = <T>(items: T[], accessor: (item: T) => string) =>
   [...items].sort((left, right) => accessor(left).localeCompare(accessor(right)))
+
+const parentRelationshipTypes: ParentRelationshipType[] = ['mother', 'father', 'relative']
+const MAX_PARENT_LINKS_PER_STUDENT = 3
+const MAX_STUDENTS_PER_PARENT = 6
 
 const generateApplicationId = () => {
   const stamp = Date.now().toString().slice(-6)
@@ -71,6 +82,12 @@ const classStudentsCollection = collection(db, 'class_students')
 const classPostsCollection = collection(db, 'class_posts')
 const systemSettingsCollection = collection(db, 'system_settings')
 const newsletterSubscribersCollection = collection(db, 'newsletter_subscribers')
+const publicAiConversationsCollection = collection(db, 'public_ai_conversations')
+const schoolDayStructuresCollection = collection(db, 'school_day_structures')
+const timetableSubjectRequirementsCollection = collection(db, 'timetable_subject_requirements')
+const teacherTimetableSettingsCollection = collection(db, 'teacher_timetable_settings')
+const timetableEntriesCollection = collection(db, 'timetable_entries')
+const timetableDraftsCollection = collection(db, 'timetable_drafts')
 const newsletterSourceLabels = {
   footer: 'Homepage Footer',
   events: 'Events Page',
@@ -429,6 +446,249 @@ export const getSubjects = async () => {
   } catch (error) {
     console.error('Error fetching subjects:', error)
     return []
+  }
+}
+
+export const getSchoolDayStructures = async () => {
+  try {
+    const snapshot = await getDocs(query(schoolDayStructuresCollection, orderBy('updated_at', 'desc')))
+    return snapshot.docs.map((entry) => withId(entry.id, entry.data())) as SchoolDayStructure[]
+  } catch (error) {
+    console.error('Error fetching school day structures:', error)
+    return []
+  }
+}
+
+export const upsertSchoolDayStructure = async (
+  id: string | null,
+  structure: Omit<SchoolDayStructure, 'id' | 'created_at' | 'updated_at'>
+) => {
+  const created_at = nowIso()
+  const payload = {
+    ...structure,
+    updated_at: created_at,
+  }
+
+  try {
+    if (id) {
+      const documentRef = doc(schoolDayStructuresCollection, id)
+      const existing = await getDoc(documentRef)
+      await setDoc(
+        documentRef,
+        removeUndefined({
+          ...payload,
+          created_at: existing.data()?.created_at || created_at,
+        }),
+        { merge: true }
+      )
+      const snapshot = await getDoc(documentRef)
+      return withId(snapshot.id, snapshot.data()) as SchoolDayStructure
+    }
+
+    const ref = await addDoc(schoolDayStructuresCollection, {
+      ...payload,
+      created_at,
+    })
+    const snapshot = await getDoc(ref)
+    return withId(snapshot.id, snapshot.data()) as SchoolDayStructure
+  } catch (error) {
+    console.error('Error saving school day structure:', error)
+    throw error
+  }
+}
+
+export const getTimetableSubjectRequirements = async () => {
+  try {
+    const snapshot = await getDocs(query(timetableSubjectRequirementsCollection, orderBy('updated_at', 'desc')))
+    return snapshot.docs.map((entry) => withId(entry.id, entry.data())) as TimetableSubjectRequirement[]
+  } catch (error) {
+    console.error('Error fetching timetable subject requirements:', error)
+    return []
+  }
+}
+
+export const createTimetableSubjectRequirement = async (
+  requirement: Omit<TimetableSubjectRequirement, 'id' | 'created_at' | 'updated_at'>
+) => {
+  try {
+    const created_at = nowIso()
+    const document = {
+      ...requirement,
+      created_at,
+      updated_at: created_at,
+    }
+    const ref = await addDoc(timetableSubjectRequirementsCollection, document)
+    return withId(ref.id, document) as TimetableSubjectRequirement
+  } catch (error) {
+    console.error('Error creating timetable subject requirement:', error)
+    throw error
+  }
+}
+
+export const updateTimetableSubjectRequirement = async (
+  id: string,
+  updates: Partial<TimetableSubjectRequirement>
+) => {
+  try {
+    const documentRef = doc(timetableSubjectRequirementsCollection, id)
+    await updateDoc(
+      documentRef,
+      removeUndefined({
+        ...updates,
+        updated_at: nowIso(),
+      })
+    )
+    const snapshot = await getDoc(documentRef)
+    return withId(snapshot.id, snapshot.data()) as TimetableSubjectRequirement
+  } catch (error) {
+    console.error('Error updating timetable subject requirement:', error)
+    throw error
+  }
+}
+
+export const deleteTimetableSubjectRequirement = async (id: string) => {
+  try {
+    await deleteDoc(doc(timetableSubjectRequirementsCollection, id))
+  } catch (error) {
+    console.error('Error deleting timetable subject requirement:', error)
+    throw error
+  }
+}
+
+export const getTeacherTimetableSettings = async () => {
+  try {
+    const snapshot = await getDocs(query(teacherTimetableSettingsCollection, orderBy('teacher_name', 'asc')))
+    return snapshot.docs.map((entry) => withId(entry.id, entry.data())) as TeacherTimetableSetting[]
+  } catch (error) {
+    console.error('Error fetching teacher timetable settings:', error)
+    return []
+  }
+}
+
+export const upsertTeacherTimetableSetting = async (
+  id: string | null,
+  setting: Omit<TeacherTimetableSetting, 'id' | 'created_at' | 'updated_at'>
+) => {
+  const created_at = nowIso()
+  const payload = {
+    ...setting,
+    updated_at: created_at,
+  }
+
+  try {
+    if (id) {
+      const documentRef = doc(teacherTimetableSettingsCollection, id)
+      const existing = await getDoc(documentRef)
+      await setDoc(
+        documentRef,
+        removeUndefined({
+          ...payload,
+          created_at: existing.data()?.created_at || created_at,
+        }),
+        { merge: true }
+      )
+      const snapshot = await getDoc(documentRef)
+      return withId(snapshot.id, snapshot.data()) as TeacherTimetableSetting
+    }
+
+    const ref = await addDoc(teacherTimetableSettingsCollection, {
+      ...payload,
+      created_at,
+    })
+    const snapshot = await getDoc(ref)
+    return withId(snapshot.id, snapshot.data()) as TeacherTimetableSetting
+  } catch (error) {
+    console.error('Error saving teacher timetable setting:', error)
+    throw error
+  }
+}
+
+export const getTimetableEntries = async () => {
+  try {
+    const dayOrder = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+    const snapshot = await getDocs(timetableEntriesCollection)
+    return snapshot.docs
+      .map((entry) => withId(entry.id, entry.data()) as TimetableEntry)
+      .sort((left, right) => {
+        const dayDifference = dayOrder.indexOf(left.day) - dayOrder.indexOf(right.day)
+        if (dayDifference !== 0) return dayDifference
+        return left.period_number - right.period_number
+      })
+  } catch (error) {
+    console.error('Error fetching timetable entries:', error)
+    return []
+  }
+}
+
+export const replaceTimetableEntries = async (
+  filters: { academic_year: string; term: string },
+  entries: Array<Omit<TimetableEntry, 'id' | 'created_at' | 'updated_at'>>
+) => {
+  try {
+    const existing = await getDocs(
+      query(
+        timetableEntriesCollection,
+        where('academic_year', '==', filters.academic_year),
+        where('term', '==', filters.term)
+      )
+    )
+
+    await Promise.all(existing.docs.map((entry) => deleteDoc(entry.ref)))
+
+    const created_at = nowIso()
+    const saved = await Promise.all(
+      entries.map(async (entry) => {
+        const document = {
+          ...entry,
+          created_at,
+          updated_at: created_at,
+        }
+        const ref = await addDoc(timetableEntriesCollection, document)
+        return withId(ref.id, document) as TimetableEntry
+      })
+    )
+
+    return saved
+  } catch (error) {
+    console.error('Error replacing timetable entries:', error)
+    throw error
+  }
+}
+
+const buildTimetableDraftId = (academicYear: string, term: string) =>
+  `${academicYear.trim().replace(/\s+/g, '_')}__${term.trim().replace(/\s+/g, '_')}`
+
+export const getTimetableDrafts = async () => {
+  try {
+    const snapshot = await getDocs(query(timetableDraftsCollection, orderBy('updated_at', 'desc')))
+    return snapshot.docs.map((entry) => withId(entry.id, entry.data())) as TimetableDraft[]
+  } catch (error) {
+    console.error('Error fetching timetable drafts:', error)
+    return []
+  }
+}
+
+export const upsertTimetableDraft = async (
+  payload: Omit<TimetableDraft, 'id' | 'created_at' | 'updated_at'>
+) => {
+  try {
+    const id = buildTimetableDraftId(payload.academic_year, payload.term)
+    const documentRef = doc(timetableDraftsCollection, id)
+    const existing = await getDoc(documentRef)
+    const created_at = existing.exists() ? existing.data()?.created_at || nowIso() : nowIso()
+    const updated_at = nowIso()
+    const document = removeUndefined({
+      ...payload,
+      created_at,
+      updated_at,
+    })
+
+    await setDoc(documentRef, document, { merge: true })
+    const snapshot = await getDoc(documentRef)
+    return withId(snapshot.id, snapshot.data()) as TimetableDraft
+  } catch (error) {
+    console.error('Error saving timetable draft:', error)
+    throw error
   }
 }
 
@@ -903,6 +1163,17 @@ export const getInviteByToken = async (token: string) => {
   }
 }
 
+const getStudentByEmail = async (email: string) => {
+  const snapshot = await getDocs(query(studentsCollection, where('email', '==', email)))
+  const firstMatch = snapshot.docs[0]
+  return firstMatch ? (withId(firstMatch.id, firstMatch.data()) as Student) : null
+}
+
+const getInvitesForParenting = async () => {
+  const snapshot = await getDocs(invitesCollection)
+  return snapshot.docs.map((entry) => withId(entry.id, entry.data())) as Invite[]
+}
+
 export const createInvite = async ({
   email,
   role,
@@ -910,6 +1181,10 @@ export const createInvite = async ({
   invitedByUid,
   invitedByRole,
   origin,
+  invitedByEmail,
+  relatedStudentId,
+  relatedStudentName,
+  parentRelationshipType,
 }: {
   email: string
   role: Role
@@ -917,8 +1192,110 @@ export const createInvite = async ({
   invitedByUid: string
   invitedByRole: Role
   origin: string
+  invitedByEmail?: string | null
+  relatedStudentId?: string
+  relatedStudentName?: string
+  parentRelationshipType?: ParentRelationshipType
 }) => {
   try {
+    if ((role === 'Parent' || role === 'ParentLeader') && !relatedStudentId) {
+      throw new Error('Select the student this parent will be linked to.')
+    }
+
+    if ((role === 'Parent' || role === 'ParentLeader') && !parentRelationshipType) {
+      throw new Error('Select whether this parent is the mother, father, or relative.')
+    }
+
+    if (parentRelationshipType && !parentRelationshipTypes.includes(parentRelationshipType)) {
+      throw new Error('Invalid parent relationship type.')
+    }
+
+    if (invitedByRole === 'Student') {
+      if (role !== 'Parent') {
+        throw new Error('Students can only invite parent accounts.')
+      }
+
+      const inviterEmail = invitedByEmail?.trim().toLowerCase()
+      if (!inviterEmail) {
+        throw new Error('Student invite requires the student email to be matched.')
+      }
+
+      const inviterStudent = await getStudentByEmail(inviterEmail)
+      if (!inviterStudent) {
+        throw new Error('This student account is not linked to a student record yet.')
+      }
+
+      if (relatedStudentId && relatedStudentId !== inviterStudent.id) {
+        throw new Error('Students can only invite parents for their own profile.')
+      }
+
+      relatedStudentId = inviterStudent.id
+      relatedStudentName = `${inviterStudent.first_name} ${inviterStudent.last_name}`
+    }
+
+    if (role === 'Parent' || role === 'ParentLeader') {
+      const allParentInvites = await getInvitesForParenting()
+      const normalizedEmail = email.trim().toLowerCase()
+      const studentLinks = allParentInvites.filter(
+        (invite) =>
+          invite.relatedStudentId === relatedStudentId &&
+          ['Parent', 'ParentLeader'].includes(invite.role) &&
+          ['pending', 'accepted'].includes(invite.status)
+      )
+
+      const usedRelationshipTypes = new Set(
+        studentLinks.map((invite) => invite.parentRelationshipType).filter(Boolean) as ParentRelationshipType[]
+      )
+
+      if (
+        parentRelationshipType &&
+        usedRelationshipTypes.has(parentRelationshipType) &&
+        !studentLinks.some((invite) => invite.email.toLowerCase() === normalizedEmail)
+      ) {
+        throw new Error(`This student already has a ${parentRelationshipType} parent linked or invited.`)
+      }
+
+      if (
+        studentLinks.filter((invite) => invite.email.toLowerCase() !== normalizedEmail).length >=
+        MAX_PARENT_LINKS_PER_STUDENT
+      ) {
+        throw new Error('A student cannot have more than three parent links: mother, father, and relative.')
+      }
+
+      const parentInviteStudentIds = new Set(
+        allParentInvites
+          .filter(
+            (invite) =>
+              invite.email.toLowerCase() === normalizedEmail &&
+              ['Parent', 'ParentLeader'].includes(invite.role) &&
+              ['pending', 'accepted'].includes(invite.status) &&
+              invite.relatedStudentId
+          )
+          .map((invite) => invite.relatedStudentId as string)
+      )
+
+      const totalStudentIds = new Set([
+        ...Array.from(parentInviteStudentIds),
+        relatedStudentId as string,
+      ])
+
+      if (totalStudentIds.size > MAX_STUDENTS_PER_PARENT) {
+        throw new Error('A parent can be linked to up to six students only.')
+      }
+
+      const duplicatePendingInvite = allParentInvites.find(
+        (invite) =>
+          invite.email.toLowerCase() === normalizedEmail &&
+          invite.relatedStudentId === relatedStudentId &&
+          invite.parentRelationshipType === parentRelationshipType &&
+          invite.status === 'pending'
+      )
+
+      if (duplicatePendingInvite) {
+        throw new Error('This parent already has a pending invitation for that student relationship.')
+      }
+    }
+
     const token = createInviteToken()
     const createdAt = nowIso()
     const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
@@ -934,6 +1311,9 @@ export const createInvite = async ({
       expiresAt,
       createdAt,
       signupUrl,
+      relatedStudentId,
+      relatedStudentName,
+      parentRelationshipType,
     }
 
     await setDoc(doc(invitesCollection, token), document)
@@ -1051,16 +1431,48 @@ export const acceptInvite = async ({
   }
 
   const accessProfileRef = doc(accessProfilesCollection, uid)
-  await setDoc(accessProfileRef, {
-    email,
-    displayName,
-    fullName: displayName,
-    role: invite.role,
-    permissions: rolePermissions[invite.role],
-    status: 'active',
-    department: invite.role,
-    inviteToken: token,
-  })
+  const existingAccessProfileSnapshot = await getDoc(accessProfileRef)
+  const existingAccessProfile = existingAccessProfileSnapshot.exists()
+    ? (withId(existingAccessProfileSnapshot.id, existingAccessProfileSnapshot.data()) as SystemUser)
+    : null
+
+  const existingLinkedStudentIds = new Set(existingAccessProfile?.linkedStudentIds ?? [])
+  const existingLinkedStudentNames = new Set(existingAccessProfile?.linkedStudentNames ?? [])
+
+  if ((invite.role === 'Parent' || invite.role === 'ParentLeader') && invite.relatedStudentId) {
+    existingLinkedStudentIds.add(invite.relatedStudentId)
+  }
+
+  if ((invite.role === 'Parent' || invite.role === 'ParentLeader') && invite.relatedStudentName) {
+    existingLinkedStudentNames.add(invite.relatedStudentName)
+  }
+
+  if (
+    (invite.role === 'Parent' || invite.role === 'ParentLeader') &&
+    existingLinkedStudentIds.size > MAX_STUDENTS_PER_PARENT
+  ) {
+    throw new Error('This parent already has the maximum number of linked students.')
+  }
+
+  const resolvedRole =
+    existingAccessProfile?.role && existingAccessProfile.role !== 'Guest' ? existingAccessProfile.role : invite.role
+
+  await setDoc(
+    accessProfileRef,
+    removeUndefined({
+      email,
+      displayName,
+      fullName: displayName,
+      role: resolvedRole,
+      permissions: rolePermissions[resolvedRole],
+      status: 'active',
+      department: existingAccessProfile?.department || invite.role,
+      inviteToken: token,
+      linkedStudentIds: Array.from(existingLinkedStudentIds),
+      linkedStudentNames: Array.from(existingLinkedStudentNames),
+    }),
+    { merge: true }
+  )
 
   await updateDoc(inviteRef, {
     status: 'accepted',
@@ -1222,6 +1634,147 @@ export const subscribeApplicationsSettings = (
       callback({ isOpen: true, updated_at: null })
     }
   )
+}
+
+export const getPublicAiAssistantSettings = async () => {
+  try {
+    const snapshot = await getDoc(doc(systemSettingsCollection, 'public_ai_assistant'))
+    if (!snapshot.exists()) {
+      return {
+        id: 'public_ai_assistant',
+        enabled: true,
+        hidden_message: '',
+        updated_at: nowIso(),
+      } as PublicAiAssistantSettings
+    }
+
+    return {
+      id: snapshot.id,
+      enabled: snapshot.data().enabled !== false,
+      hidden_message: (snapshot.data().hidden_message as string | undefined) ?? '',
+      updated_at: (snapshot.data().updated_at as string | undefined) ?? nowIso(),
+      updated_by: snapshot.data().updated_by as string | undefined,
+      updated_by_role: snapshot.data().updated_by_role as string | undefined,
+    } as PublicAiAssistantSettings
+  } catch (error) {
+    console.error('Error fetching public AI assistant settings:', error)
+    return {
+      id: 'public_ai_assistant',
+      enabled: true,
+      hidden_message: '',
+      updated_at: nowIso(),
+    } as PublicAiAssistantSettings
+  }
+}
+
+export const subscribePublicAiAssistantSettings = (
+  callback: (settings: PublicAiAssistantSettings) => void
+) => {
+  const settingsRef = doc(systemSettingsCollection, 'public_ai_assistant')
+
+  return onSnapshot(
+    settingsRef,
+    (snapshot) => {
+      if (!snapshot.exists()) {
+        callback({
+          id: 'public_ai_assistant',
+          enabled: true,
+          hidden_message: '',
+          updated_at: nowIso(),
+        })
+        return
+      }
+
+      callback({
+        id: snapshot.id,
+        enabled: snapshot.data().enabled !== false,
+        hidden_message: (snapshot.data().hidden_message as string | undefined) ?? '',
+        updated_at: (snapshot.data().updated_at as string | undefined) ?? nowIso(),
+        updated_by: snapshot.data().updated_by as string | undefined,
+        updated_by_role: snapshot.data().updated_by_role as string | undefined,
+      })
+    },
+    (error) => {
+      console.error('Error subscribing to public AI assistant settings:', error)
+      callback({
+        id: 'public_ai_assistant',
+        enabled: true,
+        hidden_message: '',
+        updated_at: nowIso(),
+      })
+    }
+  )
+}
+
+export const updatePublicAiAssistantSettings = async ({
+  enabled,
+  hidden_message,
+  updated_by,
+  updated_by_role,
+}: {
+  enabled: boolean
+  hidden_message?: string
+  updated_by: string
+  updated_by_role: string
+}) => {
+  const timestamp = nowIso()
+  const settingsRef = doc(systemSettingsCollection, 'public_ai_assistant')
+  await setDoc(
+    settingsRef,
+    removeUndefined({
+      enabled,
+      hidden_message: hidden_message?.trim() || '',
+      updated_at: timestamp,
+      updated_by,
+      updated_by_role,
+    }),
+    { merge: true }
+  )
+
+  return {
+    id: 'public_ai_assistant',
+    enabled,
+    hidden_message: hidden_message?.trim() || '',
+    updated_at: timestamp,
+    updated_by,
+    updated_by_role,
+  } as PublicAiAssistantSettings
+}
+
+export const getPublicAiConversationSummaries = async () => {
+  try {
+    const snapshot = await getDocs(query(publicAiConversationsCollection, orderBy('updated_at', 'desc')))
+    return snapshot.docs.map((entry) => withId(entry.id, entry.data())) as PublicAiConversationSummary[]
+  } catch (error) {
+    console.error('Error fetching public AI conversation summaries:', error)
+    return []
+  }
+}
+
+export const upsertPublicAiConversationSummary = async (
+  sessionId: string,
+  payload: Omit<PublicAiConversationSummary, 'id' | 'created_at' | 'updated_at' | 'session_id'> & {
+    created_at?: string
+    updated_at?: string
+  }
+) => {
+  const timestamp = nowIso()
+  const conversationRef = doc(publicAiConversationsCollection, sessionId)
+  const existingSnapshot = await getDoc(conversationRef)
+  const created_at = existingSnapshot.exists()
+    ? ((existingSnapshot.data().created_at as string | undefined) ?? timestamp)
+    : payload.created_at ?? timestamp
+
+  const document = removeUndefined({
+    ...payload,
+    session_id: sessionId,
+    created_at,
+    updated_at: payload.updated_at ?? timestamp,
+  })
+
+  await setDoc(conversationRef, document, { merge: true })
+  const snapshot = await getDoc(conversationRef)
+  return withId(snapshot.id, snapshot.data()) as PublicAiConversationSummary
 }
 
 export const createNewsletterSubscriber = async ({

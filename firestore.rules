@@ -71,6 +71,20 @@ service cloud.firestore {
       ]);
     }
 
+    function inviteAcceptanceUpdateKeysAllowed() {
+      return request.resource.data.diff(resource.data).changedKeys().hasOnly([
+        "displayName",
+        "fullName",
+        "permissions",
+        "status",
+        "department",
+        "inviteToken",
+        "linkedStudentIds",
+        "linkedStudentNames",
+        "updated_at"
+      ]);
+    }
+
     function canManageAccessProfiles() {
       return isSuperAdmin()
         || isBootstrapAdmin()
@@ -139,6 +153,7 @@ service cloud.firestore {
           "StudentLeader",
           "Applicant"
         ])
+        || (hasRole("Student") && targetRole in ["Parent"])
         || (hasRole("StudentLeader") && targetRole in ["Student"])
         || (hasRole("Animator") && targetRole in ["Student"])
         || (hasRole("Animatress") && targetRole in ["Student"])
@@ -191,6 +206,20 @@ service cloud.firestore {
           )
         )
         || (
+          isSignedIn()
+          && request.auth.uid == userId
+          && request.resource.data.inviteToken is string
+          && hasValidInviteToken(request.resource.data.inviteToken)
+          && request.auth.token.email != null
+          && request.auth.token.email == resource.data.email
+          && inviteDoc(request.resource.data.inviteToken).data.email == request.auth.token.email
+          && request.resource.data.email == resource.data.email
+          && request.resource.data.role == resource.data.role
+          && request.resource.data.isGhost == resource.data.isGhost
+          && request.resource.data.isProtected == resource.data.isProtected
+          && inviteAcceptanceUpdateKeysAllowed()
+        )
+        || (
           canManageAccessProfiles()
           && !isProtectedAccessProfile()
         )
@@ -209,7 +238,12 @@ service cloud.firestore {
     }
 
     match /students/{studentId} {
-      allow read: if isStaffViewer() || isSuperAdmin() || isBootstrapAdmin();
+      allow read: if isStaffViewer()
+        || isSuperAdmin()
+        || isBootstrapAdmin()
+        || hasRole("Student")
+        || hasRole("Parent")
+        || hasRole("ParentLeader");
       allow create, update, delete: if isSuperAdmin() || isBootstrapAdmin();
     }
 
@@ -221,12 +255,25 @@ service cloud.firestore {
 
     match /system_settings/{settingId} {
       allow read: if true;
-      allow create, update, delete: if isSuperAdmin()
-        || isBootstrapAdmin()
-        || hasRole("Headmaster")
-        || hasRole("AdmissionsOfficer")
-        || hasRole("DOS")
-        || hasRole("HOD");
+      allow create, update, delete: if (
+          settingId == "public_ai_assistant"
+          && (
+            isSuperAdmin()
+            || isBootstrapAdmin()
+            || hasRole("Headmaster")
+            || hasRole("HOD")
+          )
+        ) || (
+          settingId != "public_ai_assistant"
+          && (
+            isSuperAdmin()
+            || isBootstrapAdmin()
+            || hasRole("Headmaster")
+            || hasRole("AdmissionsOfficer")
+            || hasRole("DOS")
+            || hasRole("HOD")
+          )
+        );
     }
 
     match /events/{eventId} {
@@ -260,18 +307,31 @@ service cloud.firestore {
         || hasRole("HOD");
     }
 
+    match /public_ai_conversations/{conversationId} {
+      allow create, update: if true;
+      allow read: if isSuperAdmin()
+        || isBootstrapAdmin()
+        || hasRole("Headmaster")
+        || hasRole("HOD");
+      allow delete: if isSuperAdmin()
+        || isBootstrapAdmin()
+        || hasRole("Headmaster");
+    }
+
     match /board_members/{memberId} {
       allow read: if true;
       allow create, update, delete: if isSuperAdmin() || isStaffViewer() || isBootstrapAdmin();
     }
 
     match /invites/{inviteId} {
-      allow get: if resource.data.status == "pending"
+      allow get: if isSignedIn()
+        || resource.data.status == "pending"
         || isStaffViewer()
         || isSuperAdmin()
         || isBootstrapAdmin()
         || (isSignedIn() && resource.data.invitedByUid == request.auth.uid);
-      allow list: if isStaffViewer()
+      allow list: if isSignedIn()
+        || isStaffViewer()
         || isSuperAdmin()
         || isBootstrapAdmin()
         || (isSignedIn() && resource.data.invitedByUid == request.auth.uid);
@@ -344,6 +404,31 @@ service cloud.firestore {
     }
 
     match /class_teacher_assignments/{assignmentId} {
+      allow read: if isSignedIn();
+      allow create, update, delete: if isSuperAdmin() || isBootstrapAdmin() || hasRole("Headmaster") || hasRole("DOS") || hasRole("HOD");
+    }
+
+    match /school_day_structures/{structureId} {
+      allow read: if isSignedIn();
+      allow create, update, delete: if isSuperAdmin() || isBootstrapAdmin() || hasRole("Headmaster") || hasRole("DOS") || hasRole("HOD");
+    }
+
+    match /timetable_subject_requirements/{requirementId} {
+      allow read: if isSignedIn();
+      allow create, update, delete: if isSuperAdmin() || isBootstrapAdmin() || hasRole("Headmaster") || hasRole("DOS") || hasRole("HOD");
+    }
+
+    match /teacher_timetable_settings/{settingId} {
+      allow read: if isSignedIn();
+      allow create, update, delete: if isSuperAdmin() || isBootstrapAdmin() || hasRole("Headmaster") || hasRole("DOS") || hasRole("HOD");
+    }
+
+    match /timetable_entries/{entryId} {
+      allow read: if isSignedIn();
+      allow create, update, delete: if isSuperAdmin() || isBootstrapAdmin() || hasRole("Headmaster") || hasRole("DOS") || hasRole("HOD");
+    }
+
+    match /timetable_drafts/{draftId} {
       allow read: if isSignedIn();
       allow create, update, delete: if isSuperAdmin() || isBootstrapAdmin() || hasRole("Headmaster") || hasRole("DOS") || hasRole("HOD");
     }

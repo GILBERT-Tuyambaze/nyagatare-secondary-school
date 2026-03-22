@@ -19,16 +19,18 @@ import {
   getStudentMarks,
   getStudents,
   getSubjects,
+  getTimetableEntries,
   logActivity,
   updateStudentMark,
 } from '@/services/firestoreService'
-import { ActivityLog, ChatMessage, ChatThread, ClassTeacherAssignment, DisciplineCase, LearningResource, SchoolSubject, Student, StudentMark } from '@/types/database'
+import { ActivityLog, ChatMessage, ChatThread, ClassTeacherAssignment, DisciplineCase, LearningResource, SchoolSubject, Student, StudentMark, TimetableEntry } from '@/types/database'
 import { Card } from '../components/Card'
 import { ClassChatPanel } from '../components/ClassChatPanel'
 import { ClassSummaryCards } from '../components/ClassSummaryCards'
 import { DisciplinePreview } from '../components/DisciplinePreview'
 import { LearningResourcesPanel } from '../components/LearningResourcesPanel'
 import { MarksCenter } from '../components/MarksCenter'
+import { TimetablePanel } from '../components/TimetablePanel'
 import { Classroom, SystemUser } from '../types'
 
 type AcademicsState = {
@@ -44,6 +46,7 @@ type AcademicsState = {
   messages: ChatMessage[]
   disciplineCases: DisciplineCase[]
   activityLogs: ActivityLog[]
+  timetableEntries: TimetableEntry[]
 }
 
 const emptyState: AcademicsState = {
@@ -59,6 +62,7 @@ const emptyState: AcademicsState = {
   messages: [],
   disciplineCases: [],
   activityLogs: [],
+  timetableEntries: [],
 }
 
 const leadershipRoles = ['SuperAdmin', 'Headmaster', 'DOS', 'HOD'] as const
@@ -88,6 +92,7 @@ export default function AcademicsPage() {
         messages,
         disciplineCases,
         activityLogs,
+        timetableEntries,
       ] = await Promise.all([
         getAccessProfiles(),
         getClasses(),
@@ -101,6 +106,7 @@ export default function AcademicsPage() {
         getChatMessages(),
         getDisciplineCases(),
         getActivityLogs(),
+        getTimetableEntries(),
       ])
 
       setData({
@@ -116,6 +122,7 @@ export default function AcademicsPage() {
         messages,
         disciplineCases,
         activityLogs,
+        timetableEntries,
       })
     } finally {
       setLoading(false)
@@ -133,8 +140,13 @@ export default function AcademicsPage() {
 
   const isLeadership = hasRole([...leadershipRoles])
   const isTeacher = accessProfile.role === 'Teacher'
+  const isParentView = accessProfile.role === 'Parent' || accessProfile.role === 'ParentLeader'
   const actorUid = currentProfileRecord?.id || user?.uid || accessProfile.email || 'system-user'
   const actorName = currentProfileRecord?.fullName || accessProfile.displayName
+  const linkedStudentIds = useMemo(
+    () => currentProfileRecord?.linkedStudentIds ?? accessProfile.linkedStudentIds ?? [],
+    [accessProfile.linkedStudentIds, currentProfileRecord?.linkedStudentIds]
+  )
 
   const teacherAssignments = useMemo(() => {
     if (!isTeacher) return data.assignments
@@ -153,8 +165,17 @@ export default function AcademicsPage() {
       return data.classes.filter((item) => assignedClassIds.has(item.id))
     }
 
+    if (isParentView) {
+      const parentClassIds = new Set(
+        data.classStudents
+          .filter((item) => linkedStudentIds.includes(item.student_id))
+          .map((item) => item.class_id)
+      )
+      return data.classes.filter((item) => parentClassIds.has(item.id))
+    }
+
     return data.classes
-  }, [data.classes, isLeadership, isTeacher, teacherAssignments])
+  }, [data.classStudents, data.classes, isLeadership, isParentView, isTeacher, linkedStudentIds, teacherAssignments])
 
   useEffect(() => {
     if (!selectedClassId && availableClasses[0]?.id) {
@@ -170,7 +191,9 @@ export default function AcademicsPage() {
   const selectedClassStudentIds = data.classStudents
     .filter((item) => item.class_id === selectedClass?.id)
     .map((item) => item.student_id)
-  const selectedClassStudents = data.students.filter((item) => selectedClassStudentIds.includes(item.id))
+  const selectedClassStudents = data.students.filter(
+    (item) => selectedClassStudentIds.includes(item.id) && (!isParentView || linkedStudentIds.includes(item.id))
+  )
   const selectedSubjects = data.subjects.filter(
     (item) =>
       effectiveAssignments.some((assignment) => assignment.subject_id === item.id) ||
@@ -187,10 +210,13 @@ export default function AcademicsPage() {
 
   const visibleMarks = useMemo(() => {
     const classFiltered = data.marks.filter((item) => item.class_id === selectedClass?.id)
+    if (isParentView) {
+      return classFiltered.filter((item) => linkedStudentIds.includes(item.student_id))
+    }
     if (!isTeacher) return classFiltered
     const allowedSubjectIds = new Set(selectedClassAssignments.map((item) => item.subject_id))
     return classFiltered.filter((item) => allowedSubjectIds.has(item.subject_id))
-  }, [data.marks, isTeacher, selectedClass?.id, selectedClassAssignments])
+  }, [data.marks, isParentView, isTeacher, linkedStudentIds, selectedClass?.id, selectedClassAssignments])
 
   const visibleThreads = useMemo(() => {
     const classFiltered = data.threads.filter((item) => item.class_id === selectedClass?.id)
@@ -213,7 +239,13 @@ export default function AcademicsPage() {
     }
   }, [activeThreadId, visibleThreads])
 
-  const visibleDisciplineCases = data.disciplineCases.filter((item) => item.class_id === selectedClass?.id)
+  const visibleDisciplineCases = data.disciplineCases.filter(
+    (item) => item.class_id === selectedClass?.id && (!isParentView || linkedStudentIds.includes(item.student_id))
+  )
+  const classTimetable = data.timetableEntries.filter((item) => item.class_id === selectedClass?.id)
+  const teacherTimetable = isTeacher
+    ? data.timetableEntries.filter((item) => item.teacher_user_id === currentProfileRecord?.id)
+    : []
   const recentActivity = data.activityLogs
     .filter((item) =>
       selectedClass
@@ -323,7 +355,9 @@ export default function AcademicsPage() {
                     ? 'You can move across multiple classes, subjects, and teachers.'
                     : isTeacher
                       ? 'You are seeing only the classes and subjects assigned to you.'
-                      : 'This view follows your current class-based access.'}
+                      : isParentView
+                        ? 'You can review only your assigned students and their class-level academic context.'
+                        : 'This view follows your current class-based access.'}
                 </p>
               </div>
               <div className="flex flex-wrap gap-2">
@@ -389,6 +423,7 @@ export default function AcademicsPage() {
       <Tabs defaultValue="resources" className="space-y-4">
         <TabsList className="flex h-auto flex-wrap gap-2 rounded-2xl border border-slate-800 bg-slate-950/70 p-2">
           <TabsTrigger value="resources">Resources</TabsTrigger>
+          <TabsTrigger value="timetable">Timetable</TabsTrigger>
           <TabsTrigger value="marks">Marks</TabsTrigger>
           <TabsTrigger value="chat">Chats</TabsTrigger>
           <TabsTrigger value="discipline">Discipline</TabsTrigger>
@@ -408,6 +443,45 @@ export default function AcademicsPage() {
               saving={savingResource}
               onCreate={handleCreateResource}
             />
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="timetable">
+          <Card
+            title="Class Timetable"
+            description="Published class periods stay visible to leadership, teachers, students, and parents inside the academic workspace."
+          >
+            <div className="space-y-6">
+              <TimetablePanel
+                entries={classTimetable}
+                title={selectedClass ? `${selectedClass.name} Weekly Timetable` : 'Class Timetable'}
+                description={
+                  isTeacher
+                    ? 'This class timetable is filtered from the live DOS schedule and helps you follow the periods assigned to this class.'
+                    : 'This view shows the latest timetable published for the selected class, including subjects and teachers by day.'
+                }
+                emptyMessage="No timetable has been published for this class yet."
+              />
+
+              {isTeacher ? (
+                <TimetablePanel
+                  entries={teacherTimetable}
+                  title="Your Teaching Timetable"
+                  description="All of your scheduled periods across classes appear here so you can monitor your full teaching week in one place."
+                  emptyMessage="No timetable entries are currently assigned to your teaching profile."
+                />
+              ) : null}
+
+              {!isTeacher ? (
+                <TimetablePanel
+                  entries={classTimetable}
+                  title="Teachers In This Class"
+                  description="Parents, students, and leadership can also review which teacher handles each subject for the selected class."
+                  emptyMessage="Teacher timetable details will appear here after the class timetable is published."
+                  groupBy="teacher"
+                />
+              ) : null}
+            </div>
           </Card>
         </TabsContent>
 

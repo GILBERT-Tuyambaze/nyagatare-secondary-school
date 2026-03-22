@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ChevronLeft, ChevronRight, ImageIcon, Pause, Play, PlayCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ContentMediaItem } from '@/types/database'
@@ -50,12 +50,6 @@ export default function ContentMediaCarousel({ items, title }: ContentMediaCarou
   const containerRef = useRef<HTMLDivElement | null>(null)
   const safeItems = useMemo(() => items.filter((item) => item.url), [items])
   const autoSlideDuration = 5000
-
-  if (!safeItems.length) return null
-
-  const activeItem = safeItems[Math.min(activeIndex, safeItems.length - 1)]
-  const renderUrl = getRenderableUrl(activeItem)
-  const canAutoAdvance = safeItems.length > 1 && autoPlay && !isHovered && !isFocused
   const neighboringIndexes = useMemo(() => {
     if (safeItems.length <= 1) return [0]
 
@@ -64,13 +58,27 @@ export default function ContentMediaCarousel({ items, title }: ContentMediaCarou
     return Array.from(new Set([previousIndex, activeIndex, nextIndex]))
   }, [activeIndex, safeItems.length])
 
-  const goToPrevious = () => {
+  const goToPrevious = useCallback(() => {
     setActiveIndex((current) => (current === 0 ? safeItems.length - 1 : current - 1))
-  }
+  }, [safeItems.length])
 
-  const goToNext = () => {
+  const goToNext = useCallback(() => {
     setActiveIndex((current) => (current === safeItems.length - 1 ? 0 : current + 1))
-  }
+  }, [safeItems.length])
+
+  useEffect(() => {
+    if (!safeItems.length) {
+      setActiveIndex(0)
+      return
+    }
+
+    setActiveIndex((current) => Math.min(current, safeItems.length - 1))
+  }, [safeItems.length])
+
+  const hasItems = safeItems.length > 0
+  const activeItem = hasItems ? safeItems[Math.min(activeIndex, safeItems.length - 1)] : null
+  const renderUrl = activeItem ? getRenderableUrl(activeItem) : ''
+  const canAutoAdvance = safeItems.length > 1 && autoPlay && !isHovered && !isFocused
 
   useEffect(() => {
     setProgress(0)
@@ -83,7 +91,7 @@ export default function ContentMediaCarousel({ items, title }: ContentMediaCarou
     }, autoSlideDuration)
 
     return () => window.clearInterval(timer)
-  }, [autoSlideDuration, canAutoAdvance, safeItems.length])
+  }, [autoSlideDuration, canAutoAdvance, goToNext])
 
   useEffect(() => {
     if (!canAutoAdvance) {
@@ -100,6 +108,8 @@ export default function ContentMediaCarousel({ items, title }: ContentMediaCarou
 
     return () => window.clearInterval(progressTimer)
   }, [activeIndex, autoSlideDuration, canAutoAdvance])
+
+  if (!activeItem) return null
 
   const handleKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
     if (event.key === 'ArrowLeft') {

@@ -93,6 +93,19 @@ export default function InviteSignupPage() {
     setError('')
 
     try {
+      if (user && user.email?.toLowerCase() === invite.email.toLowerCase()) {
+        await acceptInvite({
+          token,
+          uid: user.uid,
+          email: user.email || invite.email,
+          displayName: displayName.trim().replace(/\b\w/g, (character) => character.toUpperCase()),
+        })
+
+        setSuccess('This parent link has been added to your existing account. Redirecting to the NSS system...')
+        setTimeout(() => navigate('/system', { replace: true }), 1200)
+        return
+      }
+
       const credentials = await createUserWithEmailAndPassword(auth, invite.email, password)
       await acceptInvite({
         token,
@@ -152,6 +165,15 @@ export default function InviteSignupPage() {
                     <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Invited Role</p>
                     <p className="mt-2 font-medium text-cyan-300">{invite.role}</p>
                   </div>
+                  {invite.relatedStudentName ? (
+                    <div>
+                      <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Linked Student</p>
+                      <p className="mt-2 font-medium text-white">
+                        {invite.relatedStudentName}
+                        {invite.parentRelationshipType ? ` · ${invite.parentRelationshipType}` : ''}
+                      </p>
+                    </div>
+                  ) : null}
                 </div>
 
                 <div className="space-y-2">
@@ -191,7 +213,13 @@ export default function InviteSignupPage() {
 
                 <div className="flex flex-wrap gap-3">
                   <Button type="submit" className="bg-cyan-400 text-slate-950 hover:bg-cyan-300" disabled={submitting}>
-                    {submitting ? 'Creating Account...' : 'Create Account'}
+                    {submitting
+                      ? user && user.email?.toLowerCase() === invite.email.toLowerCase()
+                        ? 'Accepting Invite...'
+                        : 'Creating Account...'
+                      : user && user.email?.toLowerCase() === invite.email.toLowerCase()
+                        ? 'Accept Invite On This Account'
+                        : 'Create Account'}
                   </Button>
                   {user ? (
                     <Button type="button" variant="outline" className={outlineButtonClassName} onClick={signOut}>

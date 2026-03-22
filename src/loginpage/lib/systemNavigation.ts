@@ -39,9 +39,16 @@ export const systemNavItems: SystemNavItem[] = [
     label: 'AI Hub',
     to: '/system/ai-hub',
     icon: BrainCircuit,
-    detail: 'Chat-based support and analytics-driven insights.',
+    detail: 'Internal system AI for role-aware analysis, prompts, and operational insights.',
     permission: 'view_reports',
     headerShortcut: true,
+  },
+  {
+    label: 'GILBERT',
+    to: '/system/gilbert',
+    icon: BrainCircuit,
+    detail: 'Review the public website assistant, its visibility, and visitor conversations separately from the internal AI Hub.',
+    permission: 'view_reports',
   },
   {
     label: 'My Profile',
@@ -78,6 +85,13 @@ export const systemNavItems: SystemNavItem[] = [
     roles: ['SuperAdmin', 'Headmaster', 'DOS', 'HOD', 'DOD'],
   },
   {
+    label: 'Timetable',
+    to: '/system/timetable',
+    icon: LayoutDashboard,
+    detail: 'Generate, review, and export the full school timetable with conflict-aware teacher scheduling.',
+    roles: ['SuperAdmin', 'Headmaster', 'DOS', 'HOD', 'DOD'],
+  },
+  {
     label: 'Content',
     to: '/system/content',
     icon: FileText,
@@ -105,7 +119,7 @@ export const systemNavItems: SystemNavItem[] = [
     to: '/system/invite',
     icon: UserPlus,
     detail: 'Create secure one-time onboarding links.',
-    permission: 'assign_roles',
+    roles: ['SuperAdmin', 'Headmaster', 'AdmissionsOfficer', 'DOS', 'DOD', 'Bursar', 'HOD', 'Teacher', 'Student', 'StudentLeader', 'Animator', 'Animatress', 'ParentLeader', 'ContentManager'],
   },
 ]
 

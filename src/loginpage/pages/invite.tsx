@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -23,7 +23,7 @@ export default function InvitePage() {
   const outlineButtonClassName =
     'border-slate-600 bg-slate-900/80 text-slate-100 hover:border-cyan-400/40 hover:bg-slate-800 hover:text-white'
 
-  const loadInvites = async () => {
+  const loadInvites = useCallback(async () => {
     setLoading(true)
     try {
       const canReadAllInvites =
@@ -42,11 +42,11 @@ export default function InvitePage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [accessProfile.role, isAdmin, user?.uid])
 
   useEffect(() => {
-    loadInvites()
-  }, [accessProfile.role, isAdmin, user?.uid])
+    void loadInvites()
+  }, [loadInvites])
 
   const inviteList = liveInvites.length ? liveInvites : invites
 
@@ -116,6 +116,12 @@ export default function InvitePage() {
                     Role: {invite.role} | invited by {invite.invitedBy}
                     {invite.invitedByRole ? ` (${invite.invitedByRole})` : ''} | expires {invite.expiresAt}
                   </p>
+                  {invite.relatedStudentName ? (
+                    <p className="mt-1 text-xs text-slate-500">
+                      Linked student: {invite.relatedStudentName}
+                      {invite.parentRelationshipType ? ` · ${invite.parentRelationshipType}` : ''}
+                    </p>
+                  ) : null}
                   {invite.signupUrl ? <p className="mt-1 break-all text-xs text-cyan-300">{invite.signupUrl}</p> : null}
                 </div>
                 <div className="space-y-3">

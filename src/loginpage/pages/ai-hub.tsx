@@ -273,7 +273,7 @@ export default function AiHubPage() {
 
   return (
     <div className="space-y-6">
-      <Card title="AI Chatbot + Analytics Hub" description="A working admin-focused assistant for operational summaries and quick analytics guidance.">
+      <Card title="AI Hub" description="The internal NSS system AI for leadership prompts, operational summaries, and analytics guidance. GILBERT remains the separate public website assistant.">
         <div className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
           <div className="space-y-4">
             <div className="space-y-3 rounded-2xl border border-slate-800 bg-slate-900/60 p-4">
@@ -339,6 +339,9 @@ export default function AiHubPage() {
                 {isAdmin
                   ? 'You can use the AI assistant to ask operational questions and get admin-focused summaries.'
                   : 'You can view insights, but only admin accounts can send AI assistant prompts.'}
+              </p>
+              <p className="mt-2 text-xs text-slate-500">
+                GILBERT supports the public website. AI Hub is the private internal AI workspace for NSS staff and leadership.
               </p>
               <p className="mt-2 text-xs text-slate-500">
                 Data source: {contextStatus === 'live' ? 'Live Firestore collections' : contextStatus === 'loading' ? 'Loading Firestore context...' : 'Fallback sample context'}

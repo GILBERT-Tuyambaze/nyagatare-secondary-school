@@ -17,6 +17,8 @@ export type Role =
   | 'Applicant'
   | 'Guest'
 
+export type ParentRelationshipType = 'mother' | 'father' | 'relative'
+
 export type Permission =
   | 'manage_users'
   | 'assign_roles'
@@ -38,6 +40,8 @@ export interface AccessProfile {
   status?: 'active' | 'invited' | 'suspended'
   isGhost?: boolean
   isProtected?: boolean
+  linkedStudentIds?: string[]
+  linkedStudentNames?: string[]
 }
 
 export interface SystemUser {
@@ -50,6 +54,8 @@ export interface SystemUser {
   department: string
   isGhost?: boolean
   isProtected?: boolean
+  linkedStudentIds?: string[]
+  linkedStudentNames?: string[]
 }
 
 export interface RoleDefinition {
@@ -72,6 +78,9 @@ export interface Invite {
   signupUrl?: string
   acceptedAt?: string
   acceptedByUid?: string
+  relatedStudentId?: string
+  relatedStudentName?: string
+  parentRelationshipType?: ParentRelationshipType
 }
 
 export interface AcademicOverview {

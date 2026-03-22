@@ -21,6 +21,12 @@ export function Sidebar({ profile }: { profile: AccessProfile }) {
         </div>
       </div>
 
+      <div className="mb-6 rounded-3xl border border-slate-800 bg-slate-900/70 p-4">
+        <p className="text-xs uppercase tracking-[0.25em] text-slate-400">AI Assistant</p>
+        <p className="mt-2 text-base font-semibold text-white">GILBERT</p>
+        <p className="mt-2 text-sm leading-6 text-slate-300">GILBERT is the public website assistant. Use the sidebar to review it here, while the header AI Hub stays focused on internal system intelligence.</p>
+      </div>
+
       <nav className="grid gap-2 md:grid-cols-2 lg:grid-cols-1">
         {getSidebarSystemNav(profile).map((item) => {
             const Icon = item.icon

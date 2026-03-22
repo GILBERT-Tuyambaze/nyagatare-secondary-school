@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useCallback, useEffect, useState } from 'react'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -23,7 +23,7 @@ export const BoardMemberForm: React.FC<BoardMemberFormProps> = ({
   member,
   onSuccess
 }) => {
-  const buildInitialFormData = () => ({
+  const buildInitialFormData = useCallback(() => ({
     full_name: member?.full_name || '',
     position: member?.position || '',
     category: member?.category || 'teacher',
@@ -34,7 +34,7 @@ export const BoardMemberForm: React.FC<BoardMemberFormProps> = ({
     experience_years: member?.experience_years || 0,
     profile_image: member?.profile_image || '',
     is_active: member?.is_active ?? true
-  })
+  }), [member])
 
   const [formData, setFormData] = useState(buildInitialFormData)
   const [loading, setLoading] = useState(false)
@@ -45,7 +45,7 @@ export const BoardMemberForm: React.FC<BoardMemberFormProps> = ({
       setFormData(buildInitialFormData())
       setError('')
     }
-  }, [member, open])
+  }, [buildInitialFormData, open])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()

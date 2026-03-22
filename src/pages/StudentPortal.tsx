@@ -60,7 +60,7 @@ const StudentPortal: React.FC = () => {
         document.getElementById('decision-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
       }, 150)
     }
-  }, [application?.id, application?.status])
+  }, [application])
 
   const handleSearch = async (event: React.FormEvent) => {
     event.preventDefault()

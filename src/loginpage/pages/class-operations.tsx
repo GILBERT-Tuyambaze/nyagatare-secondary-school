@@ -19,11 +19,12 @@ import {
   getLearningResources,
   getStudents,
   getSubjects,
+  getTimetableEntries,
   logActivity,
   updateClassroom,
   updateClassTeacherAssignment,
 } from '@/services/firestoreService'
-import { ActivityLog, ClassTeacherAssignment, DisciplineCase, LearningResource, SchoolSubject, Student } from '@/types/database'
+import { ActivityLog, ClassTeacherAssignment, DisciplineCase, LearningResource, SchoolSubject, Student, TimetableEntry } from '@/types/database'
 import { Card } from '../components/Card'
 import { Classroom, SystemUser } from '../types'
 
@@ -37,6 +38,7 @@ type ClassOperationsState = {
   resources: LearningResource[]
   disciplineCases: DisciplineCase[]
   activityLogs: ActivityLog[]
+  timetableEntries: TimetableEntry[]
 }
 
 type ClassDraft = {
@@ -76,6 +78,7 @@ const emptyState: ClassOperationsState = {
   resources: [],
   disciplineCases: [],
   activityLogs: [],
+  timetableEntries: [],
 }
 
 const roleFocus: Record<string, string[]> = {
@@ -126,7 +129,7 @@ export default function ClassOperationsPage() {
   const load = async () => {
     setLoading(true)
     try {
-      const [classes, classStudents, students, profiles, subjects, assignments, resources, disciplineCases, activityLogs] =
+      const [classes, classStudents, students, profiles, subjects, assignments, resources, disciplineCases, activityLogs, timetableEntries] =
         await Promise.all([
           getClasses(),
           getClassStudents(),
@@ -137,9 +140,10 @@ export default function ClassOperationsPage() {
           getLearningResources(),
           getDisciplineCases(),
           getActivityLogs(),
+          getTimetableEntries(),
         ])
 
-      setData({ classes, classStudents, students, profiles, subjects, assignments, resources, disciplineCases, activityLogs })
+      setData({ classes, classStudents, students, profiles, subjects, assignments, resources, disciplineCases, activityLogs, timetableEntries })
     } finally {
       setLoading(false)
     }
@@ -178,6 +182,7 @@ export default function ClassOperationsPage() {
   const classStudents = data.students.filter((item) => classStudentIds.includes(item.id))
   const classResources = data.resources.filter((item) => item.class_id === selectedClass?.id)
   const classDiscipline = data.disciplineCases.filter((item) => item.class_id === selectedClass?.id)
+  const classTimetableEntries = data.timetableEntries.filter((item) => item.class_id === selectedClass?.id)
   const recentActivity = data.activityLogs
     .filter(
       (item) =>
@@ -198,6 +203,8 @@ export default function ClassOperationsPage() {
 
   const subjectCoverage = useMemo(() => new Set(classAssignments.map((item) => item.subject_name)).size, [classAssignments])
   const availableStudentLeaders = classStudents.filter((item) => item.status === 'active')
+  const timetableClassCoverage = new Set(data.timetableEntries.map((item) => item.class_id)).size
+  const timetableTeacherCoverage = new Set(data.timetableEntries.map((item) => item.teacher_user_id)).size
 
   const handleCreateClass = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -469,6 +476,56 @@ export default function ClassOperationsPage() {
                   {item}
                 </Badge>
               ))}
+            </div>
+          </div>
+
+          <div className="grid gap-4 lg:grid-cols-[1.05fr,0.95fr]">
+            <div className="rounded-3xl border border-slate-800 bg-slate-950/70 p-5">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <h3 className="text-lg font-semibold text-white">Timetable Readiness</h3>
+                  <p className="mt-2 text-sm text-slate-400">See whether class deployment already has timetable coverage before you adjust class teachers, student placement, or subject mapping.</p>
+                </div>
+                <Link
+                  to="/system/timetable"
+                  className="rounded-2xl border border-cyan-500/25 bg-cyan-500/10 px-4 py-2 text-sm font-medium text-cyan-100 transition-colors hover:border-cyan-400/40"
+                >
+                  Open Timetable Studio
+                </Link>
+              </div>
+              <div className="mt-4 grid gap-4 sm:grid-cols-3">
+                <div className="rounded-2xl border border-slate-800 bg-slate-900/70 p-4">
+                  <p className="text-sm text-slate-400">Classes Scheduled</p>
+                  <p className="mt-2 text-2xl font-bold text-white">{timetableClassCoverage}</p>
+                  <p className="mt-2 text-xs text-slate-400">Classes already carrying saved timetable entries.</p>
+                </div>
+                <div className="rounded-2xl border border-slate-800 bg-slate-900/70 p-4">
+                  <p className="text-sm text-slate-400">Teachers Scheduled</p>
+                  <p className="mt-2 text-2xl font-bold text-cyan-200">{timetableTeacherCoverage}</p>
+                  <p className="mt-2 text-xs text-slate-400">Teachers already tied to timetable periods.</p>
+                </div>
+                <div className="rounded-2xl border border-slate-800 bg-slate-900/70 p-4">
+                  <p className="text-sm text-slate-400">Selected Class Periods</p>
+                  <p className="mt-2 text-2xl font-bold text-white">{classTimetableEntries.length}</p>
+                  <p className="mt-2 text-xs text-slate-400">Periods currently published for the active class selection.</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="rounded-3xl border border-slate-800 bg-slate-950/70 p-5">
+              <h3 className="text-lg font-semibold text-white">Timetable Quick Actions</h3>
+              <p className="mt-2 text-sm text-slate-400">Jump straight into the scheduling work that supports class creation and teacher deployment.</p>
+              <div className="mt-4 grid gap-3">
+                <Link to="/system/timetable" className="rounded-2xl border border-slate-700 bg-slate-900/80 px-4 py-3 text-sm text-slate-100 transition-colors hover:bg-slate-800 hover:text-white">
+                  Generate or review the full school timetable
+                </Link>
+                <Link to="/system/timetable" className="rounded-2xl border border-slate-700 bg-slate-900/80 px-4 py-3 text-sm text-slate-100 transition-colors hover:bg-slate-800 hover:text-white">
+                  Validate teacher conflicts before changing class assignments
+                </Link>
+                <Link to="/system/academics" className="rounded-2xl border border-slate-700 bg-slate-900/80 px-4 py-3 text-sm text-slate-100 transition-colors hover:bg-slate-800 hover:text-white">
+                  Check the published class timetable from the academic workspace
+                </Link>
+              </div>
             </div>
           </div>
         </div>

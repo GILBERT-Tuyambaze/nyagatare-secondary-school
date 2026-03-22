@@ -1,4 +1,4 @@
-import { DragEvent, useEffect, useMemo, useState } from 'react'
+import { DragEvent, useCallback, useEffect, useMemo, useState } from 'react'
 import { ArrowDown, ArrowUp, Film, GripVertical, ImageIcon, Link2, Loader2, Plus, Trash2 } from 'lucide-react'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
@@ -54,7 +54,7 @@ const getFeaturedImage = (manualValue: string, gallery: ContentMediaItem[]) => {
 }
 
 export function EventEditorForm({ open, onOpenChange, eventItem, authorName, onSuccess }: EventEditorFormProps) {
-  const buildInitialState = () => ({
+  const buildInitialState = useCallback(() => ({
     title: eventItem?.title || '',
     description: eventItem?.description || '',
     event_date: eventItem?.event_date ? String(eventItem.event_date).slice(0, 10) : '',
@@ -67,7 +67,7 @@ export function EventEditorForm({ open, onOpenChange, eventItem, authorName, onS
     status: eventItem?.status || ('upcoming' as Event['status']),
     image_url: eventItem?.image_url || '',
     media_gallery: eventItem?.media_gallery || ([] as ContentMediaItem[]),
-  })
+  }), [eventItem])
 
   const [formData, setFormData] = useState(buildInitialState)
   const [loading, setLoading] = useState(false)
@@ -87,7 +87,7 @@ export function EventEditorForm({ open, onOpenChange, eventItem, authorName, onS
       setMediaType('image')
       setMediaSource('link')
     }
-  }, [eventItem, open])
+  }, [buildInitialState, open])
 
   const mediaItems = useMemo(() => formData.media_gallery || [], [formData.media_gallery])
 

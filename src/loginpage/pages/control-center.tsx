@@ -1,11 +1,11 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
-import { Calendar, DollarSign, FileText, Mail, Users } from 'lucide-react'
+import { Bot, Calendar, DollarSign, Eye, EyeOff, FileText, Mail, Users } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import {
   createDonation,
@@ -16,20 +16,33 @@ import {
   deleteNewsletterSubscriber,
   getAccessProfiles,
   getApplications,
+  getPublicAiAssistantSettings,
+  getPublicAiConversationSummaries,
   getDashboardStats,
   getDonations,
   getEvents,
   getNewsletterSubscribers,
+  updatePublicAiAssistantSettings,
   updateApplication,
   updateDonation,
   updateEvent,
   updateNewsletterSubscriber,
 } from '@/services/firestoreService'
-import { Application, Donation, Event, NewsletterSubscriber } from '@/types/database'
+import { Application, Donation, Event, NewsletterSubscriber, PublicAiAssistantSettings, PublicAiConversationSummary } from '@/types/database'
 import { Card } from '../components/Card'
 import { SystemUser } from '../types'
 
 const fieldClassName = 'border-slate-700 bg-slate-950 text-white placeholder:text-slate-400'
+type PublicAiConversationUserGroup = {
+  key: string
+  visitor_name: string
+  visitor_email: string
+  visitor_role?: string
+  total_sessions: number
+  total_messages: number
+  updated_at: string
+  items: PublicAiConversationSummary[]
+}
 
 const emptyEventDraft = {
   title: '',
@@ -72,6 +85,15 @@ export default function ControlCenterPage() {
   const [editingDonationId, setEditingDonationId] = useState<string | null>(null)
   const [donationDraft, setDonationDraft] = useState(emptyDonationDraft)
   const [donationStatusFilter, setDonationStatusFilter] = useState<'all' | Donation['payment_status']>('all')
+  const [publicAiSettings, setPublicAiSettings] = useState<PublicAiAssistantSettings>({
+    id: 'public_ai_assistant',
+    enabled: true,
+    hidden_message: '',
+    updated_at: '',
+  })
+  const [publicAiHiddenMessageDraft, setPublicAiHiddenMessageDraft] = useState('')
+  const [publicAiSummaries, setPublicAiSummaries] = useState<PublicAiConversationSummary[]>([])
+  const [selectedPublicAiUserKey, setSelectedPublicAiUserKey] = useState<string | null>(null)
 
   const canManageApplications = accessProfile.permissions.includes('view_reports')
   const canManageEvents =
@@ -83,32 +105,47 @@ export default function ControlCenterPage() {
     accessProfile.permissions.includes('manage_content') ||
     accessProfile.permissions.includes('publish_news') ||
     ['SuperAdmin', 'Headmaster', 'DOS', 'DOD', 'HOD', 'ContentManager'].includes(accessProfile.role)
+  const canManagePublicAssistant = ['SuperAdmin', 'Headmaster', 'HOD'].includes(accessProfile.role)
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     setLoading(true)
     try {
-      const [userData, applicationData, eventData, donationData, subscriberData] = await Promise.all([
+      const [userData, applicationData, eventData, donationData, subscriberData, assistantSettingsData, assistantSummariesData] = await Promise.all([
         getAccessProfiles(),
         getApplications(),
         getEvents(),
         getDonations(),
         getNewsletterSubscribers(),
+        canManagePublicAssistant
+          ? getPublicAiAssistantSettings()
+          : Promise.resolve({
+              id: 'public_ai_assistant',
+              enabled: true,
+              hidden_message: '',
+              updated_at: '',
+            } as PublicAiAssistantSettings),
+        canManagePublicAssistant ? getPublicAiConversationSummaries() : Promise.resolve([]),
       ])
       setUsers(userData)
       setApplications(applicationData)
       setEvents(eventData)
       setDonations(donationData)
       setSubscribers(subscriberData)
+      if (canManagePublicAssistant) {
+        setPublicAiSettings(assistantSettingsData)
+        setPublicAiHiddenMessageDraft(assistantSettingsData.hidden_message || '')
+        setPublicAiSummaries(assistantSummariesData)
+      }
     } catch (error) {
       console.error('Failed to load control center data:', error)
     } finally {
       setLoading(false)
     }
-  }
+  }, [canManagePublicAssistant])
 
   useEffect(() => {
     void loadData()
-  }, [])
+  }, [loadData])
 
   const overview = useMemo(() => {
     const totalDonations = donations
@@ -124,6 +161,62 @@ export default function ControlCenterPage() {
       totalSubscribers: subscribers.length,
     }
   }, [applications, donations, events, subscribers.length, users])
+
+  const publicAiUserGroups = useMemo(() => {
+    const visibleSummaries = publicAiSummaries.filter(
+      (conversation) => !conversation.visitor_is_ghost && conversation.visitor_role !== 'SuperAdmin'
+    )
+    const groups = new Map<string, PublicAiConversationUserGroup>()
+
+    visibleSummaries.forEach((conversation) => {
+      const key = conversation.visitor_email.toLowerCase()
+      const existing = groups.get(key)
+
+      if (existing) {
+        existing.total_sessions += 1
+        existing.total_messages += conversation.message_count
+        if (new Date(conversation.updated_at) > new Date(existing.updated_at)) {
+          existing.updated_at = conversation.updated_at
+        }
+        existing.items.push(conversation)
+        return
+      }
+
+      groups.set(key, {
+        key,
+        visitor_name: conversation.visitor_name,
+        visitor_email: conversation.visitor_email,
+        visitor_role: conversation.visitor_role,
+        total_sessions: 1,
+        total_messages: conversation.message_count,
+        updated_at: conversation.updated_at,
+        items: [conversation],
+      })
+    })
+
+    return Array.from(groups.values())
+      .map((group) => ({
+        ...group,
+        items: [...group.items].sort(
+          (left, right) => new Date(right.updated_at).getTime() - new Date(left.updated_at).getTime()
+        ),
+      }))
+      .sort((left, right) => new Date(right.updated_at).getTime() - new Date(left.updated_at).getTime())
+  }, [publicAiSummaries])
+
+  const selectedPublicAiUser =
+    publicAiUserGroups.find((group) => group.key === selectedPublicAiUserKey) ?? publicAiUserGroups[0] ?? null
+
+  useEffect(() => {
+    if (!publicAiUserGroups.length) {
+      setSelectedPublicAiUserKey(null)
+      return
+    }
+
+    if (!selectedPublicAiUserKey || !publicAiUserGroups.some((group) => group.key === selectedPublicAiUserKey)) {
+      setSelectedPublicAiUserKey(publicAiUserGroups[0].key)
+    }
+  }, [publicAiUserGroups, selectedPublicAiUserKey])
 
   const resetEventDraft = () => {
     setEditingEventId(null)
@@ -242,6 +335,44 @@ export default function ControlCenterPage() {
     } catch (error) {
       console.error('Failed to save donation:', error)
       setSavingMessage('Could not save the donation right now.')
+    }
+  }
+
+  const handleTogglePublicAssistant = async (enabled: boolean) => {
+    setSavingMessage('')
+    try {
+      const updated = await updatePublicAiAssistantSettings({
+        enabled,
+        hidden_message: publicAiHiddenMessageDraft,
+        updated_by: accessProfile.fullName || accessProfile.displayName,
+        updated_by_role: accessProfile.role,
+      })
+      setPublicAiSettings(updated)
+      setSavingMessage(`Public assistant ${enabled ? 'enabled' : 'hidden'} for the website.`)
+      if (canManagePublicAssistant) {
+        const summaries = await getPublicAiConversationSummaries()
+        setPublicAiSummaries(summaries)
+      }
+    } catch (error) {
+      console.error('Failed to update public AI assistant visibility:', error)
+      setSavingMessage('Could not update the public assistant visibility right now.')
+    }
+  }
+
+  const handleSavePublicAssistantMessage = async () => {
+    setSavingMessage('')
+    try {
+      const updated = await updatePublicAiAssistantSettings({
+        enabled: publicAiSettings.enabled,
+        hidden_message: publicAiHiddenMessageDraft,
+        updated_by: accessProfile.fullName || accessProfile.displayName,
+        updated_by_role: accessProfile.role,
+      })
+      setPublicAiSettings(updated)
+      setSavingMessage('Public assistant notice updated.')
+    } catch (error) {
+      console.error('Failed to save public AI assistant notice:', error)
+      setSavingMessage('Could not update the public assistant notice right now.')
     }
   }
 
@@ -368,6 +499,155 @@ export default function ControlCenterPage() {
       </Card>
 
       {savingMessage ? <p className="text-sm text-cyan-200">{savingMessage}</p> : null}
+
+      {canManagePublicAssistant ? (
+        <Card
+          title="Public Website AI Assistant"
+          description="Manage GILBERT visibility on the public website and review visitor conversation summaries."
+        >
+          <div className="grid gap-6 xl:grid-cols-[360px_minmax(0,1fr)]">
+            <div className="space-y-4 rounded-2xl border border-slate-800 bg-slate-900/60 p-4">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="font-semibold text-white">Assistant status</p>
+                  <p className="mt-1 text-sm text-slate-300">
+                    {publicAiSettings.enabled
+                      ? 'Visible across the public NSS website.'
+                      : 'Hidden from the public site until leadership re-enables it.'}
+                  </p>
+                </div>
+                <Badge className={publicAiSettings.enabled ? 'bg-emerald-500/15 text-emerald-200' : 'bg-amber-500/15 text-amber-200'}>
+                  {publicAiSettings.enabled ? 'Visible' : 'Hidden'}
+                </Badge>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <Button className="bg-cyan-400 text-slate-950 hover:bg-cyan-300" onClick={() => void handleTogglePublicAssistant(true)}>
+                  <Eye className="h-4 w-4" />
+                  Show Public AI
+                </Button>
+                <Button
+                  variant="outline"
+                  className="border-amber-500/40 bg-amber-500/10 text-amber-100 hover:bg-amber-500/20 hover:text-white"
+                  onClick={() => void handleTogglePublicAssistant(false)}
+                >
+                  <EyeOff className="h-4 w-4" />
+                  Hide Public AI
+                </Button>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="public-ai-hidden-message" className="text-slate-200">
+                  Hidden-state note
+                </Label>
+                <Textarea
+                  id="public-ai-hidden-message"
+                  value={publicAiHiddenMessageDraft}
+                  onChange={(event) => setPublicAiHiddenMessageDraft(event.target.value)}
+                  className={fieldClassName}
+                  placeholder="Optional note for leadership records when the public assistant is hidden."
+                />
+              </div>
+              <Button
+                variant="outline"
+                className="border-slate-700 bg-slate-950 text-slate-100 hover:bg-slate-800 hover:text-white"
+                onClick={() => void handleSavePublicAssistantMessage()}
+              >
+                <Bot className="h-4 w-4" />
+                Save Assistant Note
+              </Button>
+              <div className="rounded-2xl border border-slate-800 bg-slate-950/80 p-4 text-sm text-slate-300">
+                <p>Last updated: {publicAiSettings.updated_at ? new Date(publicAiSettings.updated_at).toLocaleString() : 'Not yet updated'}</p>
+                <p className="mt-1">
+                  Updated by: {publicAiSettings.updated_by || 'System default'} {publicAiSettings.updated_by_role ? `(${publicAiSettings.updated_by_role})` : ''}
+                </p>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="font-semibold text-white">Conversation summaries</p>
+                  <p className="text-sm text-slate-300">
+                    Public assistant activity grouped by user. Select a visitor to review their saved conversation summaries.
+                  </p>
+                </div>
+                <Badge className="bg-white/10 text-slate-100 hover:bg-white/10">{publicAiUserGroups.length} users</Badge>
+              </div>
+              <div className="grid gap-4 xl:grid-cols-[280px_minmax(0,1fr)]">
+                <div className="space-y-3">
+                  {publicAiUserGroups.map((group) => (
+                    <button
+                      key={group.key}
+                      type="button"
+                      onClick={() => setSelectedPublicAiUserKey(group.key)}
+                      className={`w-full rounded-2xl border p-4 text-left transition ${
+                        selectedPublicAiUser?.key === group.key
+                          ? 'border-cyan-400/50 bg-cyan-500/10'
+                          : 'border-slate-800 bg-slate-900/60 hover:border-slate-700'
+                      }`}
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <p className="font-semibold text-white">{group.visitor_name}</p>
+                          <p className="text-sm text-slate-400">{group.visitor_email}</p>
+                        </div>
+                        <Badge className="bg-white/10 text-slate-100 hover:bg-white/10">{group.total_sessions}</Badge>
+                      </div>
+                      <div className="mt-3 flex flex-wrap gap-3 text-xs text-slate-500">
+                        <span>{group.total_messages} messages</span>
+                        <span>{new Date(group.updated_at).toLocaleString()}</span>
+                      </div>
+                    </button>
+                  ))}
+                  {publicAiUserGroups.length === 0 ? (
+                    <div className="rounded-2xl border border-dashed border-slate-800 bg-slate-950/60 p-6 text-sm text-slate-400">
+                      No public visitor conversations have been recorded yet.
+                    </div>
+                  ) : null}
+                </div>
+
+                <div className="space-y-4">
+                  {selectedPublicAiUser ? (
+                    <>
+                      <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-4">
+                        <div className="flex flex-wrap items-center justify-between gap-3">
+                          <div>
+                            <p className="font-semibold text-white">{selectedPublicAiUser.visitor_name}</p>
+                            <p className="text-sm text-slate-400">{selectedPublicAiUser.visitor_email}</p>
+                          </div>
+                          <div className="text-right text-xs text-slate-500">
+                            <p>{selectedPublicAiUser.total_sessions} sessions</p>
+                            <p>{selectedPublicAiUser.total_messages} messages</p>
+                          </div>
+                        </div>
+                      </div>
+
+                      {selectedPublicAiUser.items.map((conversation) => (
+                        <div key={conversation.id} className="rounded-2xl border border-slate-800 bg-slate-900/60 p-4">
+                          <div className="flex flex-wrap items-center justify-between gap-3">
+                            <div className="text-xs text-slate-500">
+                              <p>{conversation.source_page}</p>
+                              <p>{new Date(conversation.updated_at).toLocaleString()}</p>
+                            </div>
+                            <Badge className="bg-white/10 text-slate-100 hover:bg-white/10">{conversation.status}</Badge>
+                          </div>
+                          <p className="mt-3 text-sm text-slate-300">{conversation.summary || 'No summary captured yet.'}</p>
+                          {conversation.last_user_message ? (
+                            <p className="mt-2 text-xs text-slate-500">Last question: {conversation.last_user_message}</p>
+                          ) : null}
+                          <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-slate-400">
+                            <span>{conversation.message_count} visitor messages</span>
+                            {conversation.visitor_role ? <span>Role: {conversation.visitor_role}</span> : null}
+                          </div>
+                        </div>
+                      ))}
+                    </>
+                  ) : null}
+                </div>
+              </div>
+            </div>
+          </div>
+        </Card>
+      ) : null}
 
       <Card title="Live Command Team" description="Current access profiles loaded from the database rather than static seed cards.">
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">

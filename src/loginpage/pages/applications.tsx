@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -27,23 +27,24 @@ export default function ApplicationsPage() {
   const [working, setWorking] = useState(false)
   const [message, setMessage] = useState('')
 
-  const loadApplications = async () => {
+  const loadApplications = useCallback(async () => {
     const data = await getApplications()
     const settings = await getApplicationsSettings()
     setApplicationsOpen(settings.isOpen)
     setApplicationsUpdatedAt(settings.updated_at)
     setApplications(data)
-    if (!selectedId && data[0]) {
-      setSelectedId(data[0].id)
+    setSelectedId((current) => {
+      if (current || !data[0]) return current
       setNotes(data[0].admin_notes || '')
       setCommunicationNotes(data[0].communication_notes || '')
       setDecisionNotes(data[0].decision_notes || '')
-    }
-  }
+      return data[0].id
+    })
+  }, [])
 
   useEffect(() => {
-    loadApplications()
-  }, [])
+    void loadApplications()
+  }, [loadApplications])
 
   useEffect(() => {
     const unsubscribe = subscribeApplicationsSettings((settings) => {
@@ -78,7 +79,7 @@ export default function ApplicationsPage() {
       setCommunicationNotes(selectedApplication.communication_notes || '')
       setDecisionNotes(selectedApplication.decision_notes || '')
     }
-  }, [selectedApplication?.id])
+  }, [selectedApplication])
 
   const handleStatusChange = async (status: Application['status']) => {
     if (!selectedApplication) return

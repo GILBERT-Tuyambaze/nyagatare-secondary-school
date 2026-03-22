@@ -138,7 +138,7 @@ export const invitePermissions: Record<Role, Role[]> = {
   Bursar: ['Applicant', 'Guest'],
   HOD: ['Teacher', 'Student', 'StudentLeader', 'Applicant', 'Guest'],
   Teacher: ['Student', 'StudentLeader', 'Applicant'],
-  Student: [],
+  Student: ['Parent'],
   StudentLeader: ['Student'],
   Animator: ['Student'],
   Animatress: ['Student'],
