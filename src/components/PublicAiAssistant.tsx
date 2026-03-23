@@ -341,7 +341,7 @@ export default function PublicAiAssistant() {
     lastAssistantMessage?: string
     status?: 'active' | 'closed'
   }) => {
-    if (!activeVisitor) return
+    if (!activeVisitor || !user) return
 
     const userQuestions = nextMessages
       .filter((item) => item.speaker === 'user')
