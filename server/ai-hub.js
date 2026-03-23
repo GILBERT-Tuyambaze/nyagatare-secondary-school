@@ -1,5 +1,5 @@
-const DEFAULT_MODEL = process.env.GROQ_MODEL || process.env.OPENAI_MODEL || 'openai/gpt-oss-20b'
-const DEFAULT_BASE_URL = process.env.GROQ_BASE_URL || 'https://api.groq.com/openai/v1'
+const DEFAULT_MODEL = process.env.GROQ_MODEL || process.env.OPENAI_MODEL || 'llama-3.1-8b-instant'
+const REQUEST_TIMEOUT_MS = 20000
 
 function jsonResponse(body, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -10,8 +10,26 @@ function jsonResponse(body, status = 200) {
   })
 }
 
-function getApiKey() {
-  return process.env.GROQ_API_KEY || process.env.OPENAI_API_KEY
+function getProviderConfig() {
+  if (process.env.GROQ_API_KEY) {
+    return {
+      apiKey: process.env.GROQ_API_KEY,
+      baseUrl: process.env.GROQ_BASE_URL || 'https://api.groq.com/openai/v1',
+      provider: 'groq',
+      model: process.env.GROQ_MODEL || DEFAULT_MODEL,
+    }
+  }
+
+  if (process.env.OPENAI_API_KEY) {
+    return {
+      apiKey: process.env.OPENAI_API_KEY,
+      baseUrl: 'https://api.openai.com/v1',
+      provider: 'openai',
+      model: process.env.OPENAI_MODEL || 'gpt-4.1-mini',
+    }
+  }
+
+  return null
 }
 
 function buildSystemInstructions(context) {
@@ -28,67 +46,87 @@ function buildSystemInstructions(context) {
 }
 
 async function callOpenAI({ message, context, previousResponseId }) {
-  const apiKey = getApiKey()
+  const providerConfig = getProviderConfig()
 
-  if (!apiKey) {
+  if (!providerConfig) {
     return jsonResponse(
       {
-        error: 'Missing GROQ_API_KEY on the server. Add it to your environment before using the AI hub.',
+        error: 'Missing GROQ_API_KEY or OPENAI_API_KEY on the server. Add one before using the AI hub.',
       },
       500
     )
   }
 
-  const payload = {
-    model: DEFAULT_MODEL,
-    instructions: buildSystemInstructions(context),
-    input: message,
+  const controller = new AbortController()
+  const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS)
+
+  let response
+  let data
+
+  try {
+    const payload = {
+      model: providerConfig.model,
+      temperature: 0.2,
+      max_tokens: 700,
+      messages: [
+        {
+          role: 'system',
+          content: buildSystemInstructions(context),
+        },
+        {
+          role: 'user',
+          content: message,
+        },
+      ],
+    }
+
+    response = await fetch(`${providerConfig.baseUrl}/chat/completions`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${providerConfig.apiKey}`,
+      },
+      body: JSON.stringify(payload),
+      signal: controller.signal,
+    })
+
+    data = await response.json()
+  } catch (error) {
+    if (error instanceof Error && error.name === 'AbortError') {
+      return jsonResponse(
+        {
+          error: 'The AI hub took too long to respond. Please try again.',
+          provider: providerConfig.provider,
+        },
+        504
+      )
+    }
+
+    return jsonResponse(
+      {
+        error: error instanceof Error ? error.message : 'AI request failed.',
+        provider: providerConfig.provider,
+      },
+      500
+    )
+  } finally {
+    clearTimeout(timeout)
   }
-
-  const response = await fetch(`${DEFAULT_BASE_URL}/responses`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${apiKey}`,
-    },
-    body: JSON.stringify(payload),
-  })
-
-  const data = await response.json()
 
   if (!response.ok) {
     return jsonResponse(
       {
-        error: data?.error?.message || 'Groq request failed.',
-        provider: 'groq',
+        error: data?.error?.message || 'AI request failed.',
+        provider: providerConfig.provider,
         details: data,
       },
       response.status
     )
   }
 
-  const fallbackText =
-    Array.isArray(data.output)
-      ? data.output
-          .flatMap((item) => {
-            if (Array.isArray(item.content)) {
-              return item.content
-                .filter((contentItem) => contentItem.type === 'output_text' && typeof contentItem.text === 'string')
-                .map((contentItem) => contentItem.text)
-            }
-
-            if (item.type === 'output_text' && typeof item.text === 'string') {
-              return [item.text]
-            }
-
-            return []
-          })
-          .join('\n')
-      : ''
-
   return jsonResponse({
-    id: data.id,
-    output_text: data.output_text || fallbackText || '',
+    id: data.id || data?.choices?.[0]?.message?.id || null,
+    output_text: data?.choices?.[0]?.message?.content || data?.output_text || '',
   })
 }
 

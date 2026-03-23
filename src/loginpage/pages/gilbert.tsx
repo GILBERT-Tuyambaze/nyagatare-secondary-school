@@ -379,6 +379,20 @@ export default function GilbertPage() {
                         </div>
                       </div>
                       <p className="mt-3 text-sm leading-6 text-slate-300">{conversation.summary}</p>
+                      {conversation.user_questions?.length ? (
+                        <div className="mt-3 space-y-2">
+                          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
+                            Questions asked
+                          </p>
+                          <div className="space-y-1">
+                            {conversation.user_questions.slice(-4).map((question, index) => (
+                              <p key={`${conversation.id}-question-${index}`} className="text-xs text-slate-400">
+                                {index + 1}. {question}
+                              </p>
+                            ))}
+                          </div>
+                        </div>
+                      ) : null}
                       {conversation.last_user_message ? (
                         <p className="mt-3 text-xs text-slate-500">
                           Last visitor message: {conversation.last_user_message}

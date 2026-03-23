@@ -1,5 +1,5 @@
-const DEFAULT_MODEL = process.env.GROQ_MODEL || process.env.OPENAI_MODEL || 'openai/gpt-oss-20b'
-const DEFAULT_BASE_URL = process.env.GROQ_BASE_URL || 'https://api.groq.com/openai/v1'
+const DEFAULT_MODEL = process.env.GROQ_MODEL || process.env.OPENAI_MODEL || 'llama-3.1-8b-instant'
+const REQUEST_TIMEOUT_MS = 8000
 
 function jsonResponse(body, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -10,8 +10,26 @@ function jsonResponse(body, status = 200) {
   })
 }
 
-function getApiKey() {
-  return process.env.GROQ_API_KEY || process.env.OPENAI_API_KEY
+function getProviderConfig() {
+  if (process.env.GROQ_API_KEY) {
+    return {
+      apiKey: process.env.GROQ_API_KEY,
+      baseUrl: process.env.GROQ_BASE_URL || 'https://api.groq.com/openai/v1',
+      provider: 'groq',
+      model: process.env.GROQ_MODEL || DEFAULT_MODEL,
+    }
+  }
+
+  if (process.env.OPENAI_API_KEY) {
+    return {
+      apiKey: process.env.OPENAI_API_KEY,
+      baseUrl: 'https://api.openai.com/v1',
+      provider: 'openai',
+      model: process.env.OPENAI_MODEL || 'gpt-4.1-mini',
+    }
+  }
+
+  return null
 }
 
 function stringifyJson(value) {
@@ -62,9 +80,9 @@ function buildPublicAssistantInstructions({ visitor, publicContext, pagePath }) 
 }
 
 async function callPublicAi({ history, message, visitor, publicContext, pagePath }) {
-  const apiKey = getApiKey()
+  const providerConfig = getProviderConfig()
 
-  if (!apiKey) {
+  if (!providerConfig) {
     return jsonResponse({ error: 'Missing GROQ_API_KEY or OPENAI_API_KEY on the server.' }, 500)
   }
 
@@ -76,58 +94,85 @@ async function callPublicAi({ history, message, visitor, publicContext, pagePath
         .join('\n')
     : ''
 
-  const payload = {
-    model: DEFAULT_MODEL,
-    instructions: buildPublicAssistantInstructions({ visitor, publicContext, pagePath }),
-    input: [
-      normalizedHistory ? `Recent conversation:\n${normalizedHistory}` : '',
-      `Latest visitor message: ${message}`,
-    ]
-      .filter(Boolean)
-      .join('\n\n'),
+  const controller = new AbortController()
+  const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS)
+
+  let data
+  let response
+
+  try {
+    const payload = {
+      model: providerConfig.model,
+      temperature: 0.2,
+      max_tokens: 260,
+      messages: [
+        {
+          role: 'system',
+          content: buildPublicAssistantInstructions({ visitor, publicContext, pagePath }),
+        },
+        ...(normalizedHistory
+          ? [
+              {
+                role: 'user',
+                content: `Recent conversation:\n${normalizedHistory}`,
+              },
+            ]
+          : []),
+        {
+          role: 'user',
+          content: `Latest visitor message: ${message}`,
+        },
+      ],
+    }
+
+    response = await fetch(`${providerConfig.baseUrl}/chat/completions`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${providerConfig.apiKey}`,
+      },
+      body: JSON.stringify(payload),
+      signal: controller.signal,
+    })
+
+    data = await response.json()
+  } catch (error) {
+    if (error instanceof Error && error.name === 'AbortError') {
+      return jsonResponse(
+        {
+          error: 'GILBERT took too long to respond. Please try again in a moment.',
+          provider: providerConfig.provider,
+        },
+        504
+      )
+    }
+
+    return jsonResponse(
+      {
+        error: error instanceof Error ? error.message : 'AI request failed.',
+        provider: providerConfig.provider,
+      },
+      500
+    )
+  } finally {
+    clearTimeout(timeout)
   }
-
-  const response = await fetch(`${DEFAULT_BASE_URL}/responses`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${apiKey}`,
-    },
-    body: JSON.stringify(payload),
-  })
-
-  const data = await response.json()
 
   if (!response.ok) {
     return jsonResponse(
       {
         error: data?.error?.message || 'AI request failed.',
+        provider: providerConfig.provider,
         details: data,
       },
       response.status
     )
   }
 
-  const fallbackText =
-    Array.isArray(data.output)
-      ? data.output
-          .flatMap((item) => {
-            if (Array.isArray(item.content)) {
-              return item.content
-                .filter((contentItem) => contentItem.type === 'output_text' && typeof contentItem.text === 'string')
-                .map((contentItem) => contentItem.text)
-            }
-
-            if (item.type === 'output_text' && typeof item.text === 'string') {
-              return [item.text]
-            }
-
-            return []
-          })
-          .join('\n')
-      : ''
-
-  const outputText = data.output_text || fallbackText || ''
+  const outputText =
+    data?.choices?.[0]?.message?.content ||
+    data?.output_text ||
+    ''
   const parsed = extractJsonObject(outputText)
   const reply =
     typeof parsed?.reply === 'string' && parsed.reply.trim()
@@ -139,7 +184,7 @@ async function callPublicAi({ history, message, visitor, publicContext, pagePath
       : `Visitor asked about ${message.slice(0, 120)}`
 
   return jsonResponse({
-    id: data.id,
+    id: data.id || data?.choices?.[0]?.message?.id || null,
     reply,
     summary,
   })

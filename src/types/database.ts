@@ -126,6 +126,7 @@ export interface PublicAiConversationSummary {
   visitor_is_ghost?: boolean
   source_page: string
   message_count: number
+  user_questions?: string[]
   last_user_message?: string
   last_assistant_message?: string
   summary: string

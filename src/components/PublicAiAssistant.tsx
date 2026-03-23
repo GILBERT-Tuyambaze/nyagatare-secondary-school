@@ -27,6 +27,13 @@ type WidgetPosition = {
 
 type DockSide = 'left' | 'right'
 
+type PublicAiResponse = {
+  id?: string | null
+  reply?: string
+  summary?: string
+  error?: string
+}
+
 const STORAGE_KEYS = {
   position: 'nss-public-ai-position',
   visitor: 'nss-public-ai-visitor',
@@ -336,6 +343,11 @@ export default function PublicAiAssistant() {
   }) => {
     if (!activeVisitor) return
 
+    const userQuestions = nextMessages
+      .filter((item) => item.speaker === 'user')
+      .map((item) => item.message.trim())
+      .filter(Boolean)
+
     try {
       await upsertPublicAiConversationSummary(sessionId, {
         visitor_name: activeVisitor.name,
@@ -345,6 +357,7 @@ export default function PublicAiAssistant() {
         visitor_is_ghost: Boolean(user && accessProfile.isGhost),
         source_page: location.pathname,
         message_count: nextMessages.filter((item) => item.speaker === 'user').length,
+        user_questions: userQuestions,
         last_user_message: lastUserMessage,
         last_assistant_message: lastAssistantMessage,
         summary: nextSummary,
@@ -392,6 +405,11 @@ export default function PublicAiAssistant() {
     setDraft('')
     setErrorMessage('')
     setWorking(true)
+    void saveConversationSummary({
+      nextMessages,
+      nextSummary: summary || `Visitor asked: ${message.slice(0, 140)}`,
+      lastUserMessage: message,
+    })
 
     try {
       const response = await fetch('/api/public-ai', {
@@ -408,7 +426,18 @@ export default function PublicAiAssistant() {
         }),
       })
 
-      const data = await response.json()
+      const rawText = await response.text()
+      let data: PublicAiResponse = {}
+
+      try {
+        data = rawText ? (JSON.parse(rawText) as PublicAiResponse) : {}
+      } catch {
+        data = {
+          error: response.ok
+            ? 'GILBERT returned an unreadable response.'
+            : 'GILBERT is temporarily unavailable. Please try again in a moment.',
+        }
+      }
 
       if (!response.ok) {
         throw new Error(data?.error || 'Could not get a response from GILBERT right now.')
@@ -450,7 +479,7 @@ export default function PublicAiAssistant() {
       }
       await saveConversationSummary({
         nextMessages: finalMessages,
-        nextSummary: summary || `Visitor needed help on ${location.pathname}`,
+        nextSummary: summary || `Visitor asked: ${message.slice(0, 140)}`,
         lastUserMessage: message,
         lastAssistantMessage: assistantMessage.message,
       })
